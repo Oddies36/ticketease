@@ -21,7 +21,8 @@
     "pg": "^8.16.0",
     "prisma": "^6.7.0",
     "react": "^19.0.0",
-    "react-dom": "^19.0.0"
+    "react-dom": "^19.0.0",
+    "ticketease": "file:"
   },
   "devDependencies": {
     "@eslint/eslintrc": "^3",
