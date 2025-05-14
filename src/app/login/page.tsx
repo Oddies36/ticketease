@@ -26,8 +26,6 @@ export default function LoginPage() {
       const data = await response.json();
       
       if (response.ok) {
-        // ✅ Save the JWT token in localStorage
-        localStorage.setItem("token", data.token);
         router.push("/dashboard");
       } else {
         setError(data.error || "Login failed. Please try again.");
