@@ -115,11 +115,8 @@ export const LayoutComponent: React.FC<{ children: React.ReactNode }> = ({
         >
           <Toolbar>
             <Typography variant="h6" sx={{ flexGrow: 1 }}>
-              Page d'accueil
+              
             </Typography>
-            <Button>
-                Test
-            </Button>
             <IconButton>
               <NotificationsIcon />
             </IconButton>

@@ -1,5 +1,8 @@
-import React from "react";
+"use client";
+
 import { LayoutComponent } from "@/app/components/layout";
+import React, { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 import {
   Typography,
   Box,
@@ -13,8 +16,69 @@ import {
   FormControlLabel,
   Divider,
 } from "@mui/material";
+import { useForm, Controller, useWatch } from "react-hook-form";
+import { z } from "zod";
+import { zodResolver } from "@hookform/resolvers/zod";
+
+const userSchema = z.object({
+  firstName: z.string().min(1, "Le prénom est requis").regex(/^[A-Z][a-z]*(-[A-Z][a-z]*)*$/, "Le prénom doit commencer par une majuscule, les lettres après un tiret doivent être en majuscule, et ne doit pas contenir d'apostrophe"),
+  lastName: z.string().min(1, "Le nom est requis").regex(/^[A-Z][a-z]*(-[A-Z][a-z]*)*$/, "Le nom doit commencer par une majuscule, les lettres après un tiret doivent être en majuscule, et ne doit pas contenir d'apostrophe"),
+  emailPrivate: z.string().email("Email privé invalide"),
+  password: z.string().min(8, "Le mot de passe doit contenir au moins 8 caractères"),
+  confirmPassword: z.string().min(8, "Le mot de passe doit contenir au moins 8 caractères"),
+  isAdmin: z.boolean().optional(),
+  mustChangePassword: z.boolean().optional(),
+});
 
 const Newuser: React.FC = () => {
+  const router = useRouter();
+
+    const { control, handleSubmit, formState: { errors } } = useForm({
+    resolver: zodResolver(userSchema),
+  });
+
+  const onSubmit = async (data: any) => {
+    const response = await fetch("/api/users/new-user", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(data),
+    });
+
+    const result = await response.json();
+    if (result.success) {
+      router.push("/outils");
+    } else {
+      alert("Erreur: " + result.message);
+    }
+  };
+
+    const firstName = useWatch({ control, name: "firstName" });
+    const lastName = useWatch({ control, name: "lastName" });
+    const [emailExists, setEmailExists] = useState(false);
+
+    const generateProMail = () => {
+    return `${firstName?.toLowerCase() ?? ""}.${lastName?.toLowerCase() ?? ""}@ticketease.be`;
+  };
+
+
+
+  const handleCancel = () => {
+    router.push("/outils");
+  };
+
+    useEffect(() => {
+    const email = generateProMail();
+    if (email) {
+      const checkEmailExists = async () => {
+        const response = await fetch(`/api/users/check-email?email=${email}`);
+        const data = await response.json();
+        setEmailExists(data.exists);
+      };
+
+      const debounceTimeout = setTimeout(checkEmailExists, 300);
+      return () => clearTimeout(debounceTimeout);
+    }
+  }, [firstName, lastName]);
   return (
     <LayoutComponent>
       <Box>
@@ -28,38 +92,19 @@ const Newuser: React.FC = () => {
               <Typography variant="h4" mb={3} textAlign="center">Création d'un utilisateur</Typography>
               <CardContent>
                 <Grid container spacing={2}>
-                  <Grid size={{ xs: 12, md: 6 }}>
-                    <TextField fullWidth label="Prénom" variant="outlined" required />
-                  </Grid>
-                  <Grid size={{ xs: 12, md: 6 }}>
-                    <TextField fullWidth label="Nom" variant="outlined" required />
-                  </Grid>
-                  <Grid size={{ xs: 12 }}>
-                    <TextField fullWidth label="Email privé" type="email" variant="outlined" required />
-                  </Grid>
-                  <Grid size={{ xs: 12 }}>
-                    <TextField fullWidth label="Email professionnel" variant="outlined" disabled value="prenom.nom@ticketease.be" />
-                  </Grid>
-                  <Grid size={{ xs: 12, md: 6 }}>
-                    <TextField fullWidth label="Mot de passe" type="password" variant="outlined" required />
-                  </Grid>
-                  <Grid size={{ xs: 12, md: 6 }}>
-                    <TextField fullWidth label="Confirmation du mot de passe" type="password" variant="outlined" required />
-                  </Grid>
-                  <Grid size={{ xs: 12 }}>
-                    <TextField fullWidth label="Manager" variant="outlined" />
-                  </Grid>
-                  <Grid size={{ xs: 9, md: 5 }}>
-                    <FormControlLabel control={<Checkbox />} label="Administrateur ?" />
-                  </Grid>
-                  <Grid size={{ xs: 9, md: 7 }}>
-                    <FormControlLabel control={<Checkbox />} label="Doit changer au premier login" />
-                  </Grid>
+                  <Grid size={{ xs: 12, md: 6 }}><Controller name="firstName" control={control} render={({ field }) => <TextField fullWidth label="Prénom" {...field} error={!!errors.firstName} helperText={errors.firstName?.message} />} /></Grid>
+                  <Grid size={{ xs: 12, md: 6 }}><Controller name="lastName" control={control} render={({ field }) => <TextField fullWidth label="Nom" {...field} error={!!errors.lastName} helperText={errors.lastName?.message} />} /></Grid>
+                  <Grid size={{ xs: 12 }}><Controller name="emailPrivate" control={control} render={({ field }) => <TextField fullWidth label="Email privé" {...field} error={!!errors.emailPrivate} helperText={errors.emailPrivate?.message} />} /></Grid>
+                  <Grid size={{ xs: 12 }}><TextField fullWidth label="Email professionnel" variant="outlined" disabled value={generateProMail()} /></Grid>
+                  <Grid size={{ xs: 12, md: 6 }}><Controller name="password" control={control} render={({ field }) => <TextField fullWidth type="password" label="Mot de passe" {...field} error={!!errors.password} helperText={errors.password?.message} />} /></Grid>
+                  <Grid size={{ xs: 12, md: 6 }}><Controller name="confirmPassword" control={control} render={({ field }) => <TextField fullWidth type="password" label="Confirmation du mot de passe" {...field} error={!!errors.confirmPassword} helperText={errors.confirmPassword?.message} />} /></Grid>
+                  <Grid size={{ xs: 9, md: 5 }}><Controller name="isAdmin" control={control} render={({ field }) => <FormControlLabel control={<Checkbox {...field} />} label="Administrateur ?" />} /></Grid>
+                  <Grid size={{ xs: 9, md: 7 }}><Controller name="mustChangePassword" control={control} render={({ field }) => <FormControlLabel control={<Checkbox {...field} />} label="Doit changer au premier login" />} /></Grid>
                 </Grid>
               </CardContent>
               <CardActions sx={{ justifyContent: "flex-end" }}>
-                <Button variant="contained" color="primary">Créer l'utilisateur</Button>
-                <Button variant="outlined">Annuler</Button>
+                <Button variant="contained" color="primary" onClick={handleSubmit(onSubmit)}>Créer l'utilisateur</Button>
+                <Button variant="outlined" onClick={handleCancel}>Annuler</Button>
               </CardActions>
             </Card>
           </Grid>

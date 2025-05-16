@@ -28,8 +28,8 @@ const Outils: React.FC = () => {
               </CardContent>
               <CardActions>
                 <Button size="small" onClick={() => router.push("/outils/users/newuser")}>Créer un utilisateur</Button>
-                <Button size="small">Modifier un utilisateur</Button>
-                <Button size="small">Supprimer un utilisateur</Button>
+                <Button size="small" onClick={() => router.push("/outils/users/edituser")}>Modifier un utilisateur</Button>
+                <Button size="small" onClick={() => router.push("/outils/users/deleteuser")}>Supprimer un utilisateur</Button>
               </CardActions>
             </Card>
           </Grid>
