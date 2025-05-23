@@ -44,9 +44,9 @@ const Outils: React.FC = () => {
                 </Typography>
               </CardContent>
               <CardActions>
-                <Button size="small">Créer un groupe</Button>
-                <Button size="small">Modifier un groupe</Button>
-                <Button size="small">Supprimer un groupe</Button>
+                <Button size="small" onClick={() => router.push("/outils/groupes/newgroup")}>Créer un groupe</Button>
+                <Button size="small" onClick={() => router.push("/outils/groupes/editgroup")}>Modifier un groupe</Button>
+                <Button size="small" onClick={() => router.push("/outils/groupes/deletegroup")}>Supprimer un groupe</Button>
               </CardActions>
             </Card>
           </Grid>

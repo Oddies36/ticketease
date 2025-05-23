@@ -14,15 +14,50 @@ datasource db {
 }
 
 model User {
-  id                Int      @id @default(autoincrement())
-  firstName         String
-  lastName          String
-  emailPrivate      String   @unique
-  emailProfessional String   @unique
-  password          String
-  isAdmin           Boolean  @default(false)
-  mustChangePassword Boolean @default(false)
-  managerId         Int?
-  createdAt         DateTime @default(now())
-  updatedAt         DateTime @updatedAt
+  id                  Int          @id @default(autoincrement())
+  firstName           String
+  lastName            String
+  emailPrivate        String       @unique
+  emailProfessional   String       @unique
+  password            String
+  isAdmin             Boolean      @default(false)
+  mustChangePassword  Boolean      @default(false)
+  managerId           Int?
+  createdAt           DateTime     @default(now())
+  updatedAt           DateTime     @updatedAt
+
+  ownedGroups         Group[]      @relation("OwnedGroups")
+  groupMemberships    GroupUser[]
+}
+
+model Group {
+  id          Int         @id @default(autoincrement())
+  groupName   String
+  description String?
+  locationId  Int?
+  location    Location?    @relation(fields: [locationId], references: [id])
+  ownerId     Int
+  owner       User        @relation("OwnedGroups", fields: [ownerId], references: [id])
+  members     GroupUser[]
+
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+}
+
+model GroupUser {
+  id         Int    @id @default(autoincrement())
+  userId     Int
+  groupId    Int
+  isAdmin    Boolean @default(false)
+
+  user       User   @relation(fields: [userId], references: [id])
+  group      Group  @relation(fields: [groupId], references: [id])
+
+  @@unique([userId, groupId]) // Prevent duplicate membership
+}
+
+model Location {
+  id     Int     @id @default(autoincrement())
+  name   String  @unique
+  groups Group[]
 }

@@ -74,19 +74,19 @@ export const LayoutComponent: React.FC<{ children: React.ReactNode }> = ({
             </ListItemIcon>
             <ListItemText primary="Home" />
           </ListItemButton>
-          <ListItemButton onClick={() => handleNavigation("/")}>
+          <ListItemButton onClick={() => handleNavigation("/incidents")}>
             <ListItemIcon>
               <AddCallIcon />
             </ListItemIcon>
             <ListItemText primary="Incident" />
           </ListItemButton>
-          <ListItemButton onClick={() => handleNavigation("/")}>
+          <ListItemButton onClick={() => handleNavigation("/tasks")}>
             <ListItemIcon>
               <AssignmentIcon />
             </ListItemIcon>
             <ListItemText primary="Task" />
           </ListItemButton>
-          <ListItemButton onClick={() => handleNavigation("/")}>
+          <ListItemButton onClick={() => handleNavigation("/groupes")}>
             <ListItemIcon>
               <GroupsIcon />
             </ListItemIcon>
