@@ -1,7 +1,6 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
-import { LayoutComponent } from "@/app/components/layout";
 import {
   Box,
   Table,
@@ -13,15 +12,8 @@ import {
   Paper,
   TableSortLabel,
   Typography,
-  Toolbar,
-  IconButton,
-  Dialog,
-  DialogTitle,
-  DialogContent,
-  DialogActions,
-  Button,
+  Toolbar
 } from "@mui/material";
-import DeleteIcon from "@mui/icons-material/Delete";
 
 interface UserData {
   id: number;
@@ -30,13 +22,13 @@ interface UserData {
   emailProfessional: string;
   isAdmin: boolean;
   mustChangePassword: boolean;
+  manager: string
 }
 
-const Deleteuser: React.FC = () => {
+const Edituser: React.FC = () => {
   const [users, setUsers] = useState<UserData[]>([]);
   const [orderBy, setOrderBy] = useState<keyof UserData>("firstName");
   const [order, setOrder] = useState<"asc" | "desc">("asc");
-  const [confirmDelete, setConfirmDelete] = useState<number | null>(null);
 
   useEffect(() => {
     const fetchUsers = async () => {
@@ -54,28 +46,6 @@ const Deleteuser: React.FC = () => {
     setOrderBy(property);
   };
 
-  const confirmDeleteUser = (id: number) => {
-    setConfirmDelete(id);
-  };
-
-  const deleteUser = async () => {
-    if (confirmDelete !== null) {
-      const response = await fetch(
-        `/api/users/delete-user?id=${confirmDelete}`,
-        { method: "DELETE" }
-      );
-      const result = await response.json();
-
-      if (result.success) {
-        setUsers(users.filter((user) => user.id !== confirmDelete));
-      } else {
-        alert("Erreur: " + result.message);
-      }
-
-      setConfirmDelete(null);
-    }
-  };
-
   const sortedUsers = [...users].sort((a, b) => {
     if (a[orderBy] < b[orderBy]) return order === "asc" ? -1 : 1;
     if (a[orderBy] > b[orderBy]) return order === "asc" ? 1 : -1;
@@ -83,39 +53,39 @@ const Deleteuser: React.FC = () => {
   });
 
   return (
-    <LayoutComponent>
       <Box>
         <Typography variant="h4" mb={3}>
-          Suppression d'un utilisateur
+          Modification d'un utilisateur
         </Typography>
 
         <Paper sx={{ width: "100%", mb: 2 }}>
           <Toolbar>
-            <Typography variant="h6">Suppression des utilisateurs</Typography>
+            <Typography variant="h6">Gestion des utilisateurs</Typography>
           </Toolbar>
           <TableContainer>
             <Table>
               <TableHead>
                 <TableRow>
-                  <TableCell></TableCell>
                   {[
                     "Prénom",
                     "Nom",
                     "Email",
                     "Administrateur",
                     "Doit changer le mot de passe",
+                    "Manager"
                   ].map((header, index) => (
                     <TableCell key={index}>
                       <TableSortLabel
                         active={
                           orderBy ===
-                          [
+                          ([
                             "firstName",
                             "lastName",
                             "emailProfessional",
                             "isAdmin",
                             "mustChangePassword",
-                          ][index]
+                            "manager"
+                          ][index] as keyof UserData)
                         }
                         direction={order}
                         onClick={() =>
@@ -126,6 +96,7 @@ const Deleteuser: React.FC = () => {
                               "emailProfessional",
                               "isAdmin",
                               "mustChangePassword",
+                              "manager"
                             ][index] as keyof UserData
                           )
                         }
@@ -138,12 +109,12 @@ const Deleteuser: React.FC = () => {
               </TableHead>
               <TableBody>
                 {sortedUsers.map((user) => (
-                  <TableRow key={user.id} hover>
-                    <TableCell>
-                      <IconButton onClick={() => confirmDeleteUser(user.id)}>
-                        <DeleteIcon />
-                      </IconButton>
-                    </TableCell>
+                  <TableRow
+                    key={user.id}
+                    hover
+                    onClick={() => console.log(`Clicked user ${user.id}`)}
+                    style={{ cursor: "pointer" }}
+                  >
                     <TableCell>{user.firstName}</TableCell>
                     <TableCell>{user.lastName}</TableCell>
                     <TableCell>{user.emailProfessional}</TableCell>
@@ -151,31 +122,17 @@ const Deleteuser: React.FC = () => {
                     <TableCell>
                       {user.mustChangePassword ? "Oui" : "Non"}
                     </TableCell>
+                    <TableCell>
+                      {user.manager}
+                    </TableCell>
                   </TableRow>
                 ))}
               </TableBody>
             </Table>
           </TableContainer>
         </Paper>
-
-        <Dialog
-          open={confirmDelete !== null}
-          onClose={() => setConfirmDelete(null)}
-        >
-          <DialogTitle>Confirmer la suppression</DialogTitle>
-          <DialogContent>
-            Êtes-vous sûr de vouloir supprimer cet utilisateur ?
-          </DialogContent>
-          <DialogActions>
-            <Button onClick={() => setConfirmDelete(null)}>Annuler</Button>
-            <Button onClick={deleteUser} color="error">
-              Supprimer
-            </Button>
-          </DialogActions>
-        </Dialog>
       </Box>
-    </LayoutComponent>
   );
 };
 
-export default Deleteuser;
+export default Edituser;

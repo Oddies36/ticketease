@@ -12,9 +12,8 @@ import {
   Toolbar,
   CssBaseline,
   Typography,
-  Avatar,
   IconButton,
-  Button
+  Button,
 } from "@mui/material";
 import { useRouter } from "next/navigation";
 import DashboardIcon from "@mui/icons-material/Dashboard";
@@ -24,17 +23,30 @@ import BuildIcon from "@mui/icons-material/Build";
 import AssignmentIcon from "@mui/icons-material/Assignment";
 import NotificationsIcon from "@mui/icons-material/Notifications";
 import EmailIcon from "@mui/icons-material/Email";
+import { useUserStore } from "@/app/store/userStore";
+import { authRedirect } from "@/app/components/authRedirect";
 
 const drawerWidth = 240;
 
-export const LayoutComponent: React.FC<{ children: React.ReactNode }> = ({
-  children,
-}) => {
+export default function PagesLayout({ children }: { children: React.ReactNode }) {
+  const { loading, user } = authRedirect();
   const router = useRouter();
+  const clearUser = useUserStore((state) => state.clearUser);
+
+  const handleLogout = async () => {
+    await fetch("/api/auth/logout", { method: "POST" });
+    clearUser();
+    router.push("/login");
+  };
 
   const handleNavigation = (path: string) => {
     router.push(path);
   };
+
+  // if (loading || !user) {
+  //   return null;
+  // }
+
   return (
     <Box sx={{ display: "flex" }}>
       <CssBaseline />
@@ -115,7 +127,7 @@ export const LayoutComponent: React.FC<{ children: React.ReactNode }> = ({
         >
           <Toolbar>
             <Typography variant="h6" sx={{ flexGrow: 1 }}>
-              
+              {user?.firstName}
             </Typography>
             <IconButton>
               <NotificationsIcon />
@@ -123,7 +135,7 @@ export const LayoutComponent: React.FC<{ children: React.ReactNode }> = ({
             <IconButton>
               <EmailIcon />
             </IconButton>
-            <Avatar/>
+            <Button onClick={handleLogout}>Déconnexion</Button>
           </Toolbar>
         </AppBar>
 
@@ -131,4 +143,4 @@ export const LayoutComponent: React.FC<{ children: React.ReactNode }> = ({
       </Box>
     </Box>
   );
-};
+}

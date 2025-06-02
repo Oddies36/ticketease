@@ -1,6 +1,5 @@
 "use client";
 
-import { LayoutComponent } from "@/app/components/layout";
 import React, { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import {
@@ -80,7 +79,6 @@ const Newuser: React.FC = () => {
     }
   }, [firstName, lastName]);
   return (
-    <LayoutComponent>
       <Box>
         <Typography variant="h4" mb={3}>
           Création d'un utilisateur
@@ -122,7 +120,6 @@ const Newuser: React.FC = () => {
           </Grid>
         </Grid>
       </Box>
-    </LayoutComponent>
   );
 };
 

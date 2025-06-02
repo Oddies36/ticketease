@@ -1,6 +1,5 @@
 "use client";
 
-import { LayoutComponent } from "@/app/components/layout";
 import React, { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import {
@@ -69,7 +68,6 @@ const NewGroup: React.FC = () => {
   };
 
   return (
-    <LayoutComponent>
       <Box>
         <Typography variant="h4" mb={3}>
           Création d'un groupe
@@ -169,7 +167,6 @@ const NewGroup: React.FC = () => {
           </Grid>
         </Grid>
       </Box>
-    </LayoutComponent>
   );
 };
 

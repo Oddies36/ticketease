@@ -1,7 +1,6 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
-import { LayoutComponent } from "@/app/components/layout";
 import {
   Box,
   Table,
@@ -9,15 +8,19 @@ import {
   TableCell,
   TableContainer,
   TableHead,
-  TablePagination,
   TableRow,
   Paper,
   TableSortLabel,
   Typography,
   Toolbar,
-  Tooltip,
   IconButton,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+  Button,
 } from "@mui/material";
+import DeleteIcon from "@mui/icons-material/Delete";
 
 interface UserData {
   id: number;
@@ -26,13 +29,13 @@ interface UserData {
   emailProfessional: string;
   isAdmin: boolean;
   mustChangePassword: boolean;
-  manager: string
 }
 
-const Edituser: React.FC = () => {
+const Deleteuser: React.FC = () => {
   const [users, setUsers] = useState<UserData[]>([]);
   const [orderBy, setOrderBy] = useState<keyof UserData>("firstName");
   const [order, setOrder] = useState<"asc" | "desc">("asc");
+  const [confirmDelete, setConfirmDelete] = useState<number | null>(null);
 
   useEffect(() => {
     const fetchUsers = async () => {
@@ -50,6 +53,28 @@ const Edituser: React.FC = () => {
     setOrderBy(property);
   };
 
+  const confirmDeleteUser = (id: number) => {
+    setConfirmDelete(id);
+  };
+
+  const deleteUser = async () => {
+    if (confirmDelete !== null) {
+      const response = await fetch(
+        `/api/users/delete-user?id=${confirmDelete}`,
+        { method: "DELETE" }
+      );
+      const result = await response.json();
+
+      if (result.success) {
+        setUsers(users.filter((user) => user.id !== confirmDelete));
+      } else {
+        alert("Erreur: " + result.message);
+      }
+
+      setConfirmDelete(null);
+    }
+  };
+
   const sortedUsers = [...users].sort((a, b) => {
     if (a[orderBy] < b[orderBy]) return order === "asc" ? -1 : 1;
     if (a[orderBy] > b[orderBy]) return order === "asc" ? 1 : -1;
@@ -57,40 +82,38 @@ const Edituser: React.FC = () => {
   });
 
   return (
-    <LayoutComponent>
       <Box>
         <Typography variant="h4" mb={3}>
-          Modification d'un utilisateur
+          Suppression d'un utilisateur
         </Typography>
 
         <Paper sx={{ width: "100%", mb: 2 }}>
           <Toolbar>
-            <Typography variant="h6">Gestion des utilisateurs</Typography>
+            <Typography variant="h6">Suppression des utilisateurs</Typography>
           </Toolbar>
           <TableContainer>
             <Table>
               <TableHead>
                 <TableRow>
+                  <TableCell></TableCell>
                   {[
                     "Prénom",
                     "Nom",
                     "Email",
                     "Administrateur",
                     "Doit changer le mot de passe",
-                    "Manager"
                   ].map((header, index) => (
                     <TableCell key={index}>
                       <TableSortLabel
                         active={
                           orderBy ===
-                          ([
+                          [
                             "firstName",
                             "lastName",
                             "emailProfessional",
                             "isAdmin",
                             "mustChangePassword",
-                            "manager"
-                          ][index] as keyof UserData)
+                          ][index]
                         }
                         direction={order}
                         onClick={() =>
@@ -101,7 +124,6 @@ const Edituser: React.FC = () => {
                               "emailProfessional",
                               "isAdmin",
                               "mustChangePassword",
-                              "manager"
                             ][index] as keyof UserData
                           )
                         }
@@ -114,12 +136,12 @@ const Edituser: React.FC = () => {
               </TableHead>
               <TableBody>
                 {sortedUsers.map((user) => (
-                  <TableRow
-                    key={user.id}
-                    hover
-                    onClick={() => console.log(`Clicked user ${user.id}`)}
-                    style={{ cursor: "pointer" }}
-                  >
+                  <TableRow key={user.id} hover>
+                    <TableCell>
+                      <IconButton onClick={() => confirmDeleteUser(user.id)}>
+                        <DeleteIcon />
+                      </IconButton>
+                    </TableCell>
                     <TableCell>{user.firstName}</TableCell>
                     <TableCell>{user.lastName}</TableCell>
                     <TableCell>{user.emailProfessional}</TableCell>
@@ -127,18 +149,30 @@ const Edituser: React.FC = () => {
                     <TableCell>
                       {user.mustChangePassword ? "Oui" : "Non"}
                     </TableCell>
-                    <TableCell>
-                      {user.manager}
-                    </TableCell>
                   </TableRow>
                 ))}
               </TableBody>
             </Table>
           </TableContainer>
         </Paper>
+
+        <Dialog
+          open={confirmDelete !== null}
+          onClose={() => setConfirmDelete(null)}
+        >
+          <DialogTitle>Confirmer la suppression</DialogTitle>
+          <DialogContent>
+            Êtes-vous sûr de vouloir supprimer cet utilisateur ?
+          </DialogContent>
+          <DialogActions>
+            <Button onClick={() => setConfirmDelete(null)}>Annuler</Button>
+            <Button onClick={deleteUser} color="error">
+              Supprimer
+            </Button>
+          </DialogActions>
+        </Dialog>
       </Box>
-    </LayoutComponent>
   );
 };
 
-export default Edituser;
+export default Deleteuser;

@@ -13,8 +13,11 @@ import {
   useTheme,
   Paper,
   Tooltip,
+  CircularProgress,
 } from "@mui/material";
-
+import { useEffect } from "react";
+import { useUserStore } from "@/app/store/userStore";
+import { useRouter } from "next/navigation";
 
 const LoginPage = () => {
   const theme = useTheme();
@@ -22,6 +25,33 @@ const LoginPage = () => {
   const [mail, setMail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
+  const router = useRouter();
+  const user = useUserStore((state) => state.user);
+  const setUser = useUserStore((state) => state.setUser);
+  const clearUser = useUserStore((state) => state.clearUser);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const checkSession = async () => {
+      try {
+        const res = await fetch("/api/auth/me", { credentials: "include" });
+
+        if (res.ok) {
+          const userData = await res.json();
+          setUser(userData);
+          router.push("/dashboard");
+        } else {
+          clearUser();
+          setLoading(false);
+        }
+      } catch {
+        clearUser();
+        setLoading(false);
+      }
+    };
+
+    checkSession();
+  }, []);
 
   //Change d'étape pour afficher le mot de passe
   const handleNext = () => {
@@ -30,11 +60,13 @@ const LoginPage = () => {
   //Change d'étape pour afficher l'adresse mail
   const handleBack = () => {
     setStep(0);
+    setPassword("");
+    setError("");
   };
 
   //Met à jour l'adresse mail qui vient de TextField
   const handleMailChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-    setMail(event.target.value);
+    setMail(event.target.value.toLowerCase());
   };
   //Met à jour le mot de passe qui vient de TextField
   const handlePasswordChange = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -42,25 +74,40 @@ const LoginPage = () => {
   };
 
   const handleLogin = async () => {
-    try{
+    try {
       const response = await fetch("/api/auth/login", {
         method: "POST",
         headers: {
-          "Content-Type": "application/json"
+          "Content-Type": "application/json",
         },
-        body: JSON.stringify({ email: mail, password: password })
+        body: JSON.stringify({ email: mail, password: password }),
       });
 
       if (!response.ok) {
         throw new Error("Email ou mot de passe incorrecte");
       }
 
-      const data = await response.json();
+      const meResponse = await fetch("/api/auth/me", {
+        method: "GET",
+        credentials: "include",
+      });
 
-    } catch (error){
+      if (!meResponse.ok) {
+        throw new Error("Impossible de récupérer les informations utilisateur");
+      }
+
+      const user = await meResponse.json();
+      console.log("Info user: ", user);
+      setUser(user);
+      router.push("/dashboard");
+    } catch (error) {
       setError("Email ou mot de passe incorrecte");
     }
   };
+
+  if (loading) {
+    return <CircularProgress />;
+  }
 
   return (
     <Grid container sx={{ height: "100vh", overflow: "hidden" }}>
@@ -107,50 +154,64 @@ const LoginPage = () => {
             >
               {step === 0 ? (
                 <Box>
-                  <TextField
-                    fullWidth
-                    label="E-mail"
-                    margin="normal"
-                    variant="outlined"
-                    value={mail}
-                    onChange={handleMailChange}
-                  />
-                  <Tooltip title="Contactez votre administrateur">
-                    <Link href="#" variant="body2">
-                      Pas de compte?
-                    </Link>
-                  </Tooltip>
-                  <Button
-                    fullWidth
-                    variant="contained"
-                    sx={{ mt: 2, bgcolor: "#6366F1" }}
-                    onClick={handleNext}
+                  <form
+                    onSubmit={(e) => {
+                      e.preventDefault();
+                      handleNext();
+                    }}
                   >
-                    Suivant
-                  </Button>
+                    <TextField
+                      fullWidth
+                      label="E-mail"
+                      margin="normal"
+                      variant="outlined"
+                      value={mail}
+                      onChange={handleMailChange}
+                    />
+                    <Tooltip title="Contactez votre administrateur">
+                      <Link href="#" variant="body2">
+                        Pas de compte?
+                      </Link>
+                    </Tooltip>
+                    <Button
+                      fullWidth
+                      type="submit"
+                      variant="contained"
+                      sx={{ mt: 2, bgcolor: "#6366F1" }}
+                    >
+                      Suivant
+                    </Button>
+                  </form>
                 </Box>
               ) : (
                 <Box>
-                  <TextField
-                    fullWidth
-                    label="Mot de passe"
-                    type="password"
-                    margin="normal"
-                    variant="outlined"
-                    value={password}
-                    onChange={handlePasswordChange}
-                  />
-                  <Link href="#" variant="body2">
-                    Mot de passe oublié?
-                  </Link>
-                  <Button
-                    fullWidth
-                    variant="contained"
-                    onClick={handleLogin}
-                    sx={{ mt: 2, bgcolor: "#6366F1" }}
+                  <form
+                    onSubmit={(e) => {
+                      e.preventDefault();
+                      handleLogin();
+                    }}
                   >
-                    Connexion
-                  </Button>
+                    <TextField
+                      fullWidth
+                      label="Mot de passe"
+                      type="password"
+                      margin="normal"
+                      variant="outlined"
+                      value={password}
+                      onChange={handlePasswordChange}
+                    />
+                    <Link href="#" variant="body2">
+                      Mot de passe oublié?
+                    </Link>
+                    <Button
+                      fullWidth
+                      variant="contained"
+                      onClick={handleLogin}
+                      sx={{ mt: 2, bgcolor: "#6366F1" }}
+                    >
+                      Connexion
+                    </Button>
+                  </form>
                   <Box
                     sx={{
                       position: "absolute",

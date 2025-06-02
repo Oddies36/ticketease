@@ -10,7 +10,7 @@ export async function POST(request: Request) {
     const { email, password } = await request.json();
 
     const user = await prisma.user.findUnique({
-        where: { email }
+        where: { emailProfessional: email }
     });
 
     if(!user) {
@@ -27,7 +27,7 @@ export async function POST(request: Request) {
 
     const token = jwt.sign({
         userId: user.id,
-        email: user.email
+        email: user.emailProfessional
     }, JWT_SECRET, { expiresIn: "1h"});
 
     const response = NextResponse.json({

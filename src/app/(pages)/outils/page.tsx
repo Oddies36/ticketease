@@ -1,7 +1,6 @@
 "use client";
 
 import React from "react";
-import { LayoutComponent } from "../components/layout";
 import { useRouter } from "next/navigation";
 import { Typography, Box, Card, CardContent, CardActions, Button, Grid } from "@mui/material";
 
@@ -12,7 +11,6 @@ const Outils: React.FC = () => {
         router.push(path);
       };
   return (
-    <LayoutComponent>
       <Box>
         <Typography variant="h4" mb={3}>Outils</Typography>
 
@@ -52,7 +50,6 @@ const Outils: React.FC = () => {
           </Grid>
         </Grid>
       </Box>
-    </LayoutComponent>
   );
 };
 
