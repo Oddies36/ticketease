@@ -43,9 +43,9 @@ export default function PagesLayout({ children }: { children: React.ReactNode })
     router.push(path);
   };
 
-  // if (loading || !user) {
-  //   return null;
-  // }
+  if (loading || !user) {
+    return null;
+  }
 
   return (
     <Box sx={{ display: "flex" }}>
@@ -58,7 +58,7 @@ export default function PagesLayout({ children }: { children: React.ReactNode })
           "& .MuiDrawer-paper": {
             width: drawerWidth,
             boxSizing: "border-box",
-            backgroundColor: "#303C52",
+            backgroundColor: "#6082B6",
             color: "#fff",
             height: "100vh",
           },
@@ -72,14 +72,14 @@ export default function PagesLayout({ children }: { children: React.ReactNode })
             alignItems: "center",
             height: "64px",
             px: 2,
-            backgroundColor: "#303C52",
+            backgroundColor: "#6082B6",
           }}
         >
           <Typography variant="h6" sx={{ color: "#fff" }}>
             TicketEase
           </Typography>
         </Box>
-        <List sx={{ backgroundColor: "#3C4C63" }}>
+        <List sx={{ backgroundColor: "#6082B6" }}>
           <ListItemButton onClick={() => handleNavigation("/dashboard")}>
             <ListItemIcon>
               <DashboardIcon />
