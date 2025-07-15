@@ -21,6 +21,8 @@ import {
   RadioGroup,
   FormControlLabel,
   Radio,
+  Autocomplete,
+  CircularProgress,
 } from "@mui/material";
 import { useForm, Controller } from "react-hook-form";
 import { z } from "zod";
@@ -29,52 +31,113 @@ import SearchIcon from "@mui/icons-material/Search";
 
 const groupSchema = z.object({
   groupName: z.enum([
-    "Groupe de gestion d'utilisateurs",
-    "Groupe de gestion des groupes",
-    "Groupe de gestion des incidents",
-    "Groupe de gestion des tâches",
+    "Gestion.Utilisateurs.",
+    "Gestion.Groupes.",
+    "Support.Incidents.",
+    "Support.Taches.",
   ]),
   description: z.string().optional(),
-  location: z.string(),
-  owner: z.string(),
+  location: z.coerce.number(),
+  owner: z.number(),
 });
 
 const NewGroup: React.FC = () => {
   const router = useRouter();
-  const [locations, setLocations] = useState<string[]>([]);
+  const [locations, setLocations] = useState<{ id: number; name: string }[]>(
+    []
+  );
 
-  const {control, handleSubmit, formState: { errors } } = useForm({
+  type UserOption = {
+    id: string;
+    firstName: string;
+    lastName: string;
+  };
+  const [userOptions, setUserOptions] = useState<UserOption[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [apiError, setApiError] = useState<string | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const {
+    control,
+    handleSubmit,
+    formState: { errors },
+  } = useForm({
     resolver: zodResolver(groupSchema),
   });
 
   useEffect(() => {
     const fetchLocations = async () => {
-      const res = await fetch("/api/locations");
-      const data = await res.json();
-      setLocations(data.map((loc: { name: string }) => loc.name));
+      try {
+        const res = await fetch("/api/locations");
+        const data = await res.json();
+        setLocations(data);
+      } catch (error) {
+        console.error("Error fetching locations:", error);
+      }
     };
     fetchLocations();
   }, []);
 
+  const fetchUsers = async (query: string) => {
+    if (!query) return;
+    setLoading(true);
+    try {
+      const res = await fetch(
+        `/api/users/get-users?query=${encodeURIComponent(query)}`
+      );
+      const data = await res.json();
+      setUserOptions(data);
+    } catch (error) {
+      console.error("Error fetching users:", error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const onSubmit = async (data: any) => {
+    console.log("Form submitted with data:", data);
+    setIsSubmitting(true);
+    setApiError(null);
 
-    let groupType = data.groupName;
-    let groupLocation = data.location;
+    try {
+      const selectedLocation = locations.find((l) => l.id === data.location);
 
-    let newGroupName = groupType + groupLocation;
-    data.groupName = newGroupName;
+      let groupType = data.groupName;
+      let groupLocation = selectedLocation?.name;
 
-    const response = await fetch("/api/groupes/newgroup", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(data),
-    });
+      let newGroupName = groupType + groupLocation;
 
-    const result = await response.json();
-    if (result.success) {
-      router.push("/outils");
-    } else {
-      alert("Erreur: " + result.message);
+      // Prepare the data with correct types
+      const submissionData = {
+        groupName: newGroupName,
+        description: data.description || "",
+        location: data.location, // This will be a number from the schema coercion
+        owner: data.owner,
+      };
+
+      console.log("Sending data to API:", submissionData);
+
+      const response = await fetch("/api/groupes/newgroup", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(submissionData),
+      });
+
+      console.log("API Response status:", response.status);
+
+      const result = await response.json();
+      console.log("API Response data:", result);
+
+      if (result.success) {
+        router.push("/outils");
+      } else {
+        setApiError(result.message || "Erreur inconnue");
+      }
+    } catch (error) {
+      console.error("Error submitting form:", error);
+      setApiError("Erreur de connexion");
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -95,127 +158,163 @@ const NewGroup: React.FC = () => {
               Création d'un groupe
             </Typography>
             <CardContent>
-              <Grid container spacing={2}>
-                <Grid size={{ xs: 12 }}>
-                  <Controller
-                    name="groupName"
-                    control={control}
-                    defaultValue="Groupe de gestion d'utilisateurs"
-                    render={({ field }) => (
-                      <FormControl
-                        component="fieldset"
-                        fullWidth
-                        error={!!errors.groupName}
-                      >
-                        <Typography variant="subtitle1" gutterBottom>
-                          Type de groupe
-                        </Typography>
-                        <RadioGroup {...field}>
-                          <FormControlLabel
-                            value="Gestion.Utilisateurs."
-                            control={<Radio />}
-                            label="Groupe de gestion d'utilisateurs"
-                          />
-                          <FormControlLabel
-                            value="Gestion.Groupes."
-                            control={<Radio />}
-                            label="Groupe de gestion des groupes"
-                          />
-                          <FormControlLabel
-                            value="Support.Incidents."
-                            control={<Radio />}
-                            label="Groupe de gestion des incidents"
-                          />
-                          <FormControlLabel
-                            value="Support.Taches."
-                            control={<Radio />}
-                            label="Groupe de gestion des tâches"
-                          />
-                        </RadioGroup>
-                        {errors.groupName && (
-                          <Typography variant="caption" color="error">
-                            {errors.groupName.message}
-                          </Typography>
-                        )}
-                      </FormControl>
-                    )}
-                  />
-                </Grid>
-                <Grid size={{ xs: 12 }}>
-                  <Controller
-                    name="description"
-                    control={control}
-                    render={({ field }) => (
-                      <TextField
-                        fullWidth
-                        label="Description"
-                        {...field}
-                        multiline
-                        minRows={4}
-                      />
-                    )}
-                  />
-                </Grid>
-                <Grid size={{ xs: 12 }}>
-                  <Controller
-                    name="owner"
-                    control={control}
-                    render={({ field }) => (
-                      <TextField
-                        fullWidth
-                        label="Propriétaire"
-                        {...field}
-                        error={!!errors.owner}
-                        helperText={errors.owner?.message}
-                        InputProps={{
-                          endAdornment: (
-                            <InputAdornment position="end">
-                              <IconButton
-                                onClick={() => console.log("Search clicked")}
-                              >
-                                <SearchIcon />
-                              </IconButton>
-                            </InputAdornment>
-                          ),
-                        }}
-                      />
-                    )}
-                  />
-                </Grid>
-                <Grid size={{ xs: 12 }}>
-                  <Controller
-                    name="location"
-                    control={control}
-                    defaultValue=""
-                    render={({ field }) => (
-                      <FormControl fullWidth>
-                        <InputLabel>Localisation</InputLabel>
-                        <Select
-                          label="Localisation"
-                          value={field.value ?? ""}
-                          onChange={field.onChange}
+              <form onSubmit={handleSubmit(onSubmit)}>
+                <Grid container spacing={2}>
+                  <Grid size={{ xs: 12 }}>
+                    <Controller
+                      name="groupName"
+                      defaultValue="Gestion.Utilisateurs."
+                      control={control}
+                      render={({ field }) => (
+                        <FormControl
+                          component="fieldset"
+                          fullWidth
+                          error={!!errors.groupName}
                         >
-                          {locations.map((loc) => (
-                            <MenuItem key={loc} value={loc}>
-                              {loc}
-                            </MenuItem>
-                          ))}
-                        </Select>
-                      </FormControl>
-                    )}
-                  />
+                          <Typography variant="subtitle1" gutterBottom>
+                            Type de groupe
+                          </Typography>
+                          <RadioGroup {...field}>
+                            <FormControlLabel
+                              value="Gestion.Utilisateurs."
+                              control={<Radio />}
+                              label="Groupe de gestion d'utilisateurs"
+                            />
+                            <FormControlLabel
+                              value="Gestion.Groupes."
+                              control={<Radio />}
+                              label="Groupe de gestion des groupes"
+                            />
+                            <FormControlLabel
+                              value="Support.Incidents."
+                              control={<Radio />}
+                              label="Groupe de gestion des incidents"
+                            />
+                            <FormControlLabel
+                              value="Support.Taches."
+                              control={<Radio />}
+                              label="Groupe de gestion des tâches"
+                            />
+                          </RadioGroup>
+                          {errors.groupName && (
+                            <Typography variant="caption" color="error">
+                              {errors.groupName.message}
+                            </Typography>
+                          )}
+                        </FormControl>
+                      )}
+                    />
+                  </Grid>
+                  <Grid size={{ xs: 12 }}>
+                    <Controller
+                      name="description"
+                      control={control}
+                      render={({ field }) => (
+                        <TextField
+                          fullWidth
+                          label="Description"
+                          {...field}
+                          multiline
+                          minRows={4}
+                        />
+                      )}
+                    />
+                  </Grid>
+                  <Grid size={{ xs: 12 }}>
+                    <Controller
+                      name="owner"
+                      control={control}
+                      render={({ field }) => (
+                        <Autocomplete
+                          freeSolo
+                          loading={loading}
+                          options={userOptions}
+                          getOptionLabel={(option) =>
+                            typeof option === "string"
+                              ? option
+                              : option.firstName + " " + option.lastName
+                          }
+                          onInputChange={(_, value) => fetchUsers(value)}
+                          onChange={(_, value) =>
+                            field.onChange(
+                              typeof value === "string"
+                                ? 0
+                                : parseInt(value?.id || "0")
+                            )
+                          }
+                          renderInput={(params) => (
+                            <TextField
+                              {...params}
+                              fullWidth
+                              label="Propriétaire"
+                              error={!!errors.owner}
+                              helperText={errors.owner?.message}
+                              InputProps={{
+                                ...params.InputProps,
+                                endAdornment: (
+                                  <>
+                                    {loading ? (
+                                      <CircularProgress size={20} />
+                                    ) : null}
+                                    {params.InputProps.endAdornment}
+                                  </>
+                                ),
+                              }}
+                            />
+                          )}
+                        />
+                      )}
+                    />
+                  </Grid>
+                  <Grid size={{ xs: 12 }}>
+                    <Controller
+                      name="location"
+                      control={control}
+                      render={({ field }) => (
+                        <FormControl fullWidth error={!!errors.location}>
+                          <InputLabel>Localisation</InputLabel>
+                          <Select
+                            label="Localisation"
+                            value={field.value ?? ""}
+                            onChange={field.onChange}
+                          >
+                            {locations.map((loc) => (
+                              <MenuItem key={loc.id} value={loc.id}>
+                                {loc.name}
+                              </MenuItem>
+                            ))}
+                          </Select>
+                          {errors.location && (
+                            <Typography variant="caption" color="error">
+                              {errors.location.message}
+                            </Typography>
+                          )}
+                        </FormControl>
+                      )}
+                    />
+                  </Grid>
                 </Grid>
-              </Grid>
+              </form>
             </CardContent>
+            {apiError && (
+              <Typography variant="body2" color="error" sx={{ mt: 2 }}>
+                {apiError}
+              </Typography>
+            )}
             <CardActions sx={{ justifyContent: "flex-end" }}>
               <Button
                 variant="contained"
                 color="primary"
                 onClick={handleSubmit(onSubmit)}
+                disabled={isSubmitting}
               >
-                Créer le groupe
+                {isSubmitting ? "Création..." : "Créer le groupe"}
               </Button>
-              <Button variant="outlined" onClick={handleCancel}>
+              <Button
+                variant="outlined"
+                onClick={handleCancel}
+                disabled={isSubmitting}
+              >
                 Annuler
               </Button>
             </CardActions>
@@ -230,10 +329,13 @@ const NewGroup: React.FC = () => {
               Informations importantes
             </Typography>
             <Typography variant="body2" mb={1}>
-              - Le nom du groupe est requis.
+              - Le type de groupe est requis.
             </Typography>
             <Typography variant="body2" mb={1}>
               - La description est optionnelle.
+            </Typography>
+            <Typography variant="body2" mb={1}>
+              - La localisation est requis. 
             </Typography>
             <Typography variant="body2" mb={1}>
               - Le propriétaire est la personne qui a fait la demande de

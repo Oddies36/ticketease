@@ -4,7 +4,7 @@ import { prisma } from "@/lib/prisma";
 export async function GET() {
   try {
     const locations = await prisma.location.findMany({
-      select: { name: true },
+      select: { name: true, id: true },
       orderBy: { name: "asc" }
     });
     return NextResponse.json(locations);

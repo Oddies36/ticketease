@@ -45,6 +45,22 @@ const Newuser: React.FC = () => {
 
     const result = await response.json();
     if (result.success) {
+
+      const mailResponse = await fetch("/api/send-email", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          to: data.emailPrivate,
+          subject: "Votre mot de passe Ticketease",
+          html: "Votre mot de passe est: " + data.password
+        })
+      });
+
+
+
+
+
+
       router.push("/outils");
     } else {
       alert("Erreur: " + result.message);

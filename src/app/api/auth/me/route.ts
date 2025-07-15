@@ -24,6 +24,7 @@ export async function GET() {
         lastName: true,
         emailProfessional: true,
         isAdmin: true,
+        mustChangePassword: true
       },
     });
 

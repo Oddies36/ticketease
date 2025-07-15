@@ -87,6 +87,13 @@ const LoginPage = () => {
         throw new Error("Email ou mot de passe incorrecte");
       }
 
+      const loginData = await response.json();
+
+      if(loginData.mustChangePassword){
+        router.push("/change-password");
+        return;
+      }
+
       const meResponse = await fetch("/api/auth/me", {
         method: "GET",
         credentials: "include",
@@ -99,7 +106,13 @@ const LoginPage = () => {
       const user = await meResponse.json();
       console.log("Info user: ", user);
       setUser(user);
-      router.push("/dashboard");
+      
+      if (user.mustChangePassword) {
+        router.push("/change-password");
+}     else {
+        router.push("/dashboard");
+}
+
     } catch (error) {
       setError("Email ou mot de passe incorrecte");
     }

@@ -2,7 +2,6 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
-import { cookies } from "next/headers";
 
 const JWT_SECRET = process.env.JWT_SECRET as string;
 
@@ -25,13 +24,16 @@ export async function POST(request: Request) {
         );
     }
 
+    
     const token = jwt.sign({
         userId: user.id,
         email: user.emailProfessional
     }, JWT_SECRET, { expiresIn: "1h"});
+    
 
     const response = NextResponse.json({
-        message: "Connexion réussie"
+        message: "Connexion réussie",
+        mustChangePassword: user.mustChangePassword
     });
 
     response.headers.append(

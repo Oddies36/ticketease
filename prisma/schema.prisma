@@ -37,7 +37,7 @@ model Group {
   locationId  Int?
   location    Location?    @relation(fields: [locationId], references: [id])
   ownerId     Int
-  owner       User        @relation("OwnedGroups", fields: [ownerId], references: [id])
+  owner       User        @relation("OwnedGroups", fields: [ownerId], references: [id], onDelete: Cascade)
   members     GroupUser[]
 
   createdAt   DateTime    @default(now())
@@ -50,7 +50,7 @@ model GroupUser {
   groupId    Int
   isAdmin    Boolean @default(false)
 
-  user       User   @relation(fields: [userId], references: [id])
+  user       User   @relation(fields: [userId], references: [id], onDelete: Cascade)
   group      Group  @relation(fields: [groupId], references: [id])
 
   @@unique([userId, groupId]) // Prevent duplicate membership
