@@ -4,7 +4,7 @@ import bcrypt from "bcryptjs";
 
 export async function POST(request: Request) {
   try {
-    const { firstName, lastName, emailPrivate, password, isAdmin, mustChangePassword } = await request.json();
+    const { firstName, lastName, emailPrivate, password, isAdmin, mustChangePassword, locationId } = await request.json();
 
     const emailProfessional = `${firstName.toLowerCase()}.${lastName.toLowerCase()}@ticketease.be`;
 
@@ -27,6 +27,7 @@ export async function POST(request: Request) {
         password: hashedPassword,
         isAdmin: isAdmin || false,
         mustChangePassword: mustChangePassword || false,
+        locationId,
       },
     });
 

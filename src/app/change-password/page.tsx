@@ -61,7 +61,7 @@ const ChangePasswordPage = () => {
     }
 
     try {
-      const response = await fetch("/api/auth/change-password", {
+      const response = await fetch("/api/auth/modify-password", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         credentials: "include",

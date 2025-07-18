@@ -1,11 +1,12 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 
-export async function GET() {
+export async function GET(request: NextRequest) {
+  const location = request.nextUrl.searchParams.get("location") ?? "";
   try {
-    const locations = await prisma.location.findMany({
-      select: { name: true, id: true },
-      orderBy: { name: "asc" }
+    const locations = await prisma.location.findUnique({
+      where: { name: location },
+      select: { name: true, id: true }
     });
     return NextResponse.json(locations);
   } catch (error) {

@@ -25,9 +25,19 @@ model User {
   managerId           Int?
   createdAt           DateTime     @default(now())
   updatedAt           DateTime     @updatedAt
+  locationId          Int?
+  location            Location?    @relation(fields: [locationId], references: [id])
 
   ownedGroups         Group[]      @relation("OwnedGroups")
   groupMemberships    GroupUser[]
+
+  ticketsCreated    Ticket[] @relation("TicketCreatedBy")
+  ticketsApproved   Ticket[] @relation("TicketApprovedBy")
+  ticketsAssigned   Ticket[] @relation("TicketAssignedTo")
+  ticketsUpdated    Ticket[] @relation("TicketUpdatedBy")
+  ticketsClosed     Ticket[] @relation("TicketClosedBy")
+
+  comments          Comment[]
 }
 
 model Group {
@@ -42,6 +52,8 @@ model Group {
 
   createdAt   DateTime    @default(now())
   updatedAt   DateTime    @updatedAt
+
+  assignedTickets   Ticket[]
 }
 
 model GroupUser {
@@ -60,4 +72,107 @@ model Location {
   id     Int     @id @default(autoincrement())
   name   String  @unique
   groups Group[]
+  users  User[]
+  tickets           Ticket[]
+}
+
+
+
+
+
+
+
+enum TicketType {
+  incident
+  task
+}
+
+model Status {
+  id      Int      @id @default(autoincrement())
+  label   String   @unique
+
+  tickets Ticket[]
+}
+
+model Priority {
+  id      Int      @id @default(autoincrement())
+  label   String   @unique
+
+  tickets Ticket[]
+}
+
+model Category {
+  id      Int      @id @default(autoincrement())
+  label   String   @unique
+
+  tickets Ticket[]
+}
+
+model SLA {
+  id             Int      @id @default(autoincrement())
+  priority       String   // e.g. "Critique"
+  responseTime   Int      // in minutes
+  resolutionTime Int      // in minutes
+
+  tickets        Ticket[]
+}
+
+model Ticket {
+  id               Int       @id @default(autoincrement())
+  number           String    @unique
+  title            String
+  description      String
+  type             TicketType
+
+  statusId         Int
+  priorityId       Int
+  categoryId       Int
+  slaId            Int?
+
+  isApproved       Boolean
+  approverId       Int?
+
+  createdById      Int
+  assignedToId     Int?
+  assignmentGroupId Int?
+  locationId       Int
+
+  creationDate     DateTime  @default(now())
+  updateDate       DateTime?
+  closedDate       DateTime?
+
+  updatedById      Int?
+  closedById       Int?
+
+  isBreached       Boolean?
+  responseDate     DateTime?
+  additionalInfo   String?
+
+  // Relations
+  status           Status    @relation(fields: [statusId], references: [id])
+  priority         Priority  @relation(fields: [priorityId], references: [id])
+  category         Category  @relation(fields: [categoryId], references: [id])
+  sla              SLA?      @relation(fields: [slaId], references: [id])
+  location         Location  @relation(fields: [locationId], references: [id])
+
+  createdBy        User      @relation("TicketCreatedBy", fields: [createdById], references: [id])
+  approver         User?     @relation("TicketApprovedBy", fields: [approverId], references: [id])
+  assignedTo       User?     @relation("TicketAssignedTo", fields: [assignedToId], references: [id])
+  updatedBy        User?     @relation("TicketUpdatedBy", fields: [updatedById], references: [id])
+  closedBy         User?     @relation("TicketClosedBy", fields: [closedById], references: [id])
+  assignmentGroup  Group?    @relation(fields: [assignmentGroupId], references: [id])
+
+  comments         Comment[]
+}
+
+model Comment {
+  id          Int      @id @default(autoincrement())
+  content     String
+  createdAt   DateTime @default(now())
+
+  ticketId    Int
+  createdById Int
+
+  ticket      Ticket   @relation(fields: [ticketId], references: [id])
+  createdBy   User     @relation(fields: [createdById], references: [id])
 }

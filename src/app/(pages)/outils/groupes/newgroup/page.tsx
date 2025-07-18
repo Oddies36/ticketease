@@ -28,6 +28,7 @@ import { useForm, Controller } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
 import SearchIcon from "@mui/icons-material/Search";
+import { useSearchParams } from "next/navigation";
 
 const groupSchema = z.object({
   groupName: z.enum([
@@ -37,15 +38,15 @@ const groupSchema = z.object({
     "Support.Taches.",
   ]),
   description: z.string().optional(),
-  location: z.coerce.number(),
   owner: z.number(),
 });
 
 const NewGroup: React.FC = () => {
+  const searchParams = useSearchParams();
+  const location = searchParams.get("location");
+
   const router = useRouter();
-  const [locations, setLocations] = useState<{ id: number; name: string }[]>(
-    []
-  );
+  const [locations, setLocations] = useState<{ id: number; name: string }>();
 
   type UserOption = {
     id: string;
@@ -68,7 +69,7 @@ const NewGroup: React.FC = () => {
   useEffect(() => {
     const fetchLocations = async () => {
       try {
-        const res = await fetch("/api/locations");
+        const res = await fetch(`/api/locations?location=${location}`);
         const data = await res.json();
         setLocations(data);
       } catch (error) {
@@ -88,34 +89,29 @@ const NewGroup: React.FC = () => {
       const data = await res.json();
       setUserOptions(data);
     } catch (error) {
-      console.error("Error fetching users:", error);
     } finally {
       setLoading(false);
     }
   };
 
   const onSubmit = async (data: any) => {
-    console.log("Form submitted with data:", data);
     setIsSubmitting(true);
     setApiError(null);
 
     try {
-      const selectedLocation = locations.find((l) => l.id === data.location);
-
       let groupType = data.groupName;
-      let groupLocation = selectedLocation?.name;
+      let groupLocation = locations?.name;
 
       let newGroupName = groupType + groupLocation;
 
-      // Prepare the data with correct types
+      
+
       const submissionData = {
         groupName: newGroupName,
         description: data.description || "",
-        location: data.location, // This will be a number from the schema coercion
+        location: locations?.id,
         owner: data.owner,
       };
-
-      console.log("Sending data to API:", submissionData);
 
       const response = await fetch("/api/groupes/newgroup", {
         method: "POST",
@@ -267,30 +263,12 @@ const NewGroup: React.FC = () => {
                     />
                   </Grid>
                   <Grid size={{ xs: 12 }}>
-                    <Controller
-                      name="location"
-                      control={control}
-                      render={({ field }) => (
-                        <FormControl fullWidth error={!!errors.location}>
-                          <InputLabel>Localisation</InputLabel>
-                          <Select
-                            label="Localisation"
-                            value={field.value ?? ""}
-                            onChange={field.onChange}
-                          >
-                            {locations.map((loc) => (
-                              <MenuItem key={loc.id} value={loc.id}>
-                                {loc.name}
-                              </MenuItem>
-                            ))}
-                          </Select>
-                          {errors.location && (
-                            <Typography variant="caption" color="error">
-                              {errors.location.message}
-                            </Typography>
-                          )}
-                        </FormControl>
-                      )}
+                    <TextField
+                      fullWidth
+                      label="Localisation"
+                      value={locations?.name}
+                      disabled
+                      slotProps={{ inputLabel: { shrink: true } }}
                     />
                   </Grid>
                 </Grid>
@@ -335,7 +313,7 @@ const NewGroup: React.FC = () => {
               - La description est optionnelle.
             </Typography>
             <Typography variant="body2" mb={1}>
-              - La localisation est requis. 
+              - La localisation est requis.
             </Typography>
             <Typography variant="body2" mb={1}>
               - Le propriétaire est la personne qui a fait la demande de
