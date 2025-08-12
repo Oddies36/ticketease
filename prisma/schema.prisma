@@ -99,6 +99,7 @@ model Priority {
   label   String   @unique
 
   tickets Ticket[]
+  slas    SLA[]
 }
 
 model Category {
@@ -110,10 +111,11 @@ model Category {
 
 model SLA {
   id             Int      @id @default(autoincrement())
-  priority       String   // e.g. "Critique"
+  priorityId       Int
   responseTime   Int      // in minutes
   resolutionTime Int      // in minutes
 
+  priority       Priority @relation(fields: [priorityId], references: [id])
   tickets        Ticket[]
 }
 

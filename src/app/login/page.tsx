@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   Box,
   Button,
@@ -15,7 +15,6 @@ import {
   Tooltip,
   CircularProgress,
 } from "@mui/material";
-import { useEffect } from "react";
 import { useUserStore } from "@/app/store/userStore";
 import { useRouter } from "next/navigation";
 
@@ -35,7 +34,6 @@ const LoginPage = () => {
     const checkSession = async () => {
       try {
         const res = await fetch("/api/auth/me", { credentials: "include" });
-
         if (res.ok) {
           const userData = await res.json();
           setUser(userData);
@@ -49,81 +47,61 @@ const LoginPage = () => {
         setLoading(false);
       }
     };
-
     checkSession();
   }, []);
 
-  //Change d'étape pour afficher le mot de passe
-  const handleNext = () => {
-    setStep(1);
-  };
-  //Change d'étape pour afficher l'adresse mail
+  const handleNext = () => setStep(1);
   const handleBack = () => {
     setStep(0);
     setPassword("");
     setError("");
   };
-
-  //Met à jour l'adresse mail qui vient de TextField
-  const handleMailChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-    setMail(event.target.value.toLowerCase());
+  const handleMailChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setMail(e.target.value.toLowerCase());
   };
-  //Met à jour le mot de passe qui vient de TextField
-  const handlePasswordChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-    setPassword(event.target.value);
+  const handlePasswordChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setPassword(e.target.value);
   };
 
   const handleLogin = async () => {
     try {
       const response = await fetch("/api/auth/login", {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ email: mail, password: password }),
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: mail, password }),
       });
-
-      if (!response.ok) {
-        throw new Error("Email ou mot de passe incorrecte");
-      }
+      if (!response.ok) throw new Error("Email ou mot de passe incorrecte");
 
       const loginData = await response.json();
-
-      if(loginData.mustChangePassword){
+      if (loginData.mustChangePassword) {
         router.push("/change-password");
         return;
       }
-
       const meResponse = await fetch("/api/auth/me", {
         method: "GET",
         credentials: "include",
       });
+      if (!meResponse.ok) throw new Error("Impossible de récupérer les informations utilisateur");
 
-      if (!meResponse.ok) {
-        throw new Error("Impossible de récupérer les informations utilisateur");
-      }
-
-      const user = await meResponse.json();
-      console.log("Info user: ", user);
-      setUser(user);
-      
-      if (user.mustChangePassword) {
-        router.push("/change-password");
-}     else {
-        router.push("/dashboard");
-}
-
-    } catch (error) {
+      const meUser = await meResponse.json();
+      setUser(meUser);
+      if (meUser.mustChangePassword) router.push("/change-password");
+      else router.push("/dashboard");
+    } catch {
       setError("Email ou mot de passe incorrecte");
     }
   };
 
   if (loading) {
-    return <CircularProgress />;
+    return (
+      <Box sx={{ height: "100vh", display: "flex", alignItems: "center", justifyContent: "center" }}>
+        <CircularProgress />
+      </Box>
+    );
   }
 
   return (
-    <Grid container sx={{ height: "100vh", overflow: "hidden" }}>
+    <Grid container sx={{ minHeight: "100vh" }}>
       <Grid
         size={{ xs: 12, md: 6 }}
         sx={{
@@ -131,28 +109,23 @@ const LoginPage = () => {
           justifyContent: "center",
           alignItems: "center",
           backgroundColor: "#f4f6f8",
-          padding: 4,
+          p: { xs: 2, md: 4 },
         }}
       >
         <Paper
           elevation={3}
           sx={{
-            overflow: "hidden",
             position: "relative",
             width: "100%",
             maxWidth: 400,
           }}
         >
-          <Container maxWidth="xs" sx={{ padding: "50px" }}>
+          <Container maxWidth={false} sx={{ p: { xs: 3, md: 6 } }}>
             <Typography
               variant="h4"
               fontWeight="bold"
               gutterBottom
-              sx={{
-                color: "#000000",
-                display: "flex",
-                justifyContent: "center",
-              }}
+              sx={{ color: "#000000", textAlign: "center" }}
             >
               Connexion
             </Typography>
@@ -180,18 +153,15 @@ const LoginPage = () => {
                       variant="outlined"
                       value={mail}
                       onChange={handleMailChange}
+                      autoComplete="username"
+                      inputMode="email"
                     />
                     <Tooltip title="Contactez votre administrateur">
                       <Link href="#" variant="body2">
                         Pas de compte?
                       </Link>
                     </Tooltip>
-                    <Button
-                      fullWidth
-                      type="submit"
-                      variant="contained"
-                      sx={{ mt: 2, bgcolor: "#6366F1" }}
-                    >
+                    <Button fullWidth type="submit" variant="contained" sx={{ mt: 2, bgcolor: "#6366F1" }}>
                       Suivant
                     </Button>
                   </form>
@@ -212,27 +182,16 @@ const LoginPage = () => {
                       variant="outlined"
                       value={password}
                       onChange={handlePasswordChange}
+                      autoComplete="current-password"
                     />
                     <Link href="#" variant="body2">
                       Mot de passe oublié?
                     </Link>
-                    <Button
-                      fullWidth
-                      variant="contained"
-                      onClick={handleLogin}
-                      sx={{ mt: 2, bgcolor: "#6366F1" }}
-                    >
+                    <Button fullWidth variant="contained" onClick={handleLogin} sx={{ mt: 2, bgcolor: "#6366F1" }}>
                       Connexion
                     </Button>
                   </form>
-                  <Box
-                    sx={{
-                      position: "absolute",
-                      top: 0,
-                      left: 0,
-                      margin: "5px",
-                    }}
-                  >
+                  <Box sx={{ position: "absolute", top: 0, left: 0, m: 1 }}>
                     <Button variant="text" onClick={handleBack}>
                       Retour
                     </Button>
@@ -248,17 +207,16 @@ const LoginPage = () => {
           </Container>
         </Paper>
       </Grid>
-
       <Grid
         size={{ xs: 12, md: 6 }}
         sx={{
-          backgroundColor: theme.palette.primary.dark,
-          display: "flex",
+          display: { xs: "none", md: "flex" },
           justifyContent: "center",
           alignItems: "center",
           color: "white",
           textAlign: "center",
-          height: "100vh",
+          backgroundColor: theme.palette.primary.dark,
+          minHeight: "100vh",
           overflow: "hidden",
         }}
       >

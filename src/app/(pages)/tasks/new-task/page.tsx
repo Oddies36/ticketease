@@ -11,12 +11,11 @@ import {
   MenuItem,
   FormControl,
   InputLabel,
-  CircularProgress,
 } from "@mui/material";
 import { useForm, Controller } from "react-hook-form";
 import { useRouter } from "next/navigation";
 
-const NewIncident: React.FC = () => {
+const NewTask: React.FC = () => {
   const router = useRouter();
   const {
     control,
@@ -24,40 +23,32 @@ const NewIncident: React.FC = () => {
     formState: { errors },
   } = useForm();
 
-const onSubmit = async (data: any) => {
-  try {
-    const response = await fetch("/api/incidents/create-incident", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        title: data.title,
-        description: data.description,
-        impact: data.impact,
-        categorie: data.categorie,
-      }),
-    });
+  const onSubmit = async (data: any) => {
+    try {
+      const response = await fetch("/api/tasks/create-task", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(data),
+      });
 
-    if (!response.ok) {
-      const error = await response.json();
-      console.error("Erreur lors de la création :", error);
-      return;
+      if (!response.ok) {
+        const error = await response.json();
+        console.error("Erreur lors de la création :", error);
+        return;
+      }
+
+      const createdTask = await response.json();
+      console.log("Demande créée :", createdTask);
+      router.push("/tasks");
+    } catch (error) {
+      console.error("Erreur lors de la requête :", error);
     }
-
-    const createdIncident = await response.json();
-    console.log("Incident créé :", createdIncident);
-    router.push("/incidents");
-
-  } catch (error) {
-    console.error("Erreur lors de la requête :", error);
-  }
-};
+  };
 
   return (
     <Box>
       <Typography variant="h4" mb={3}>
-        Nouveau ticket d'incident
+        Nouvelle demande
       </Typography>
 
       <form onSubmit={handleSubmit(onSubmit)}>
@@ -72,35 +63,24 @@ const onSubmit = async (data: any) => {
                   {...field}
                   fullWidth
                   label="Titre"
-                  error={!!errors.titre}
+                  error={!!errors.title}
                 />
               )}
             />
           </Grid>
 
-          <Grid size={{ xs: 12, md: 6 }}>
+          <Grid size={{ xs: 12 }}>
             <Controller
-              name="impact"
+              name="demandePour"
               control={control}
-              rules={{ required: "L'impact est requis" }}
+              rules={{ required: "Ce champ est requis" }}
               render={({ field }) => (
-                <FormControl fullWidth error={!!errors.impact}>
-                  <InputLabel>Impact</InputLabel>
-                  <Select {...field} label="Impact">
-                    <MenuItem value="individuel">
-                      Je suis le seul impacté
-                    </MenuItem>
-                    <MenuItem value="plusieurs">
-                      Plusieurs collègues sont impactés
-                    </MenuItem>
-                    <MenuItem value="service">
-                      Mon service entier est impacté
-                    </MenuItem>
-                    <MenuItem value="global">
-                      L'ensemble du site est impacté
-                    </MenuItem>
-                  </Select>
-                </FormControl>
+                <TextField
+                  {...field}
+                  fullWidth
+                  label="Demande pour"
+                  error={!!errors.demandePour}
+                />
               )}
             />
           </Grid>
@@ -132,21 +112,40 @@ const onSubmit = async (data: any) => {
                 <FormControl fullWidth error={!!errors.categorie}>
                   <InputLabel>Catégorie</InputLabel>
                   <Select {...field} label="Catégorie">
-                    <MenuItem value="Réseau">Réseau</MenuItem>
-                    <MenuItem value="Matériel">Matériel</MenuItem>
-                    <MenuItem value="Logiciel">Logiciel</MenuItem>
-                    <MenuItem value="Accès">Accès</MenuItem>
-                    <MenuItem value="Autre">Autre</MenuItem>
+                    <MenuItem value="Demande de laptop">Demande de laptop</MenuItem>
+                    <MenuItem value="Demande de desktop">Demande de desktop</MenuItem>
+                    <MenuItem value="Demande de matériel supplémentaire">Demande de matériel supplémentaire</MenuItem>
+                    <MenuItem value="Création d'un nouvel utilisateur">Création d'un nouvel utilisateur</MenuItem>
+                    <MenuItem value="Création d'un nouveau groupe">Création d'un nouveau groupe</MenuItem>
                   </Select>
-                  <Typography variant="caption" color="error"></Typography>
                 </FormControl>
               )}
             />
           </Grid>
 
           <Grid size={{ xs: 12 }}>
+            <Controller
+              name="informationsAdditionnelles"
+              control={control}
+              render={({ field }) => (
+                <TextField
+                  {...field}
+                  fullWidth
+                  multiline
+                  minRows={3}
+                  label="Informations additionnelles"
+                />
+              )}
+            />
+            <Typography variant="caption" color="text.secondary" mt={1}>
+              Pour la création d’un utilisateur, veuillez introduire son email privé.
+              Si ce champ est vide, la demande ne pourra pas être validée.
+            </Typography>
+          </Grid>
+
+          <Grid size={{ xs: 12 }}>
             <Button type="submit" variant="contained" color="primary">
-              Créer l'incident
+              Créer la demande
             </Button>
           </Grid>
         </Grid>
@@ -155,4 +154,4 @@ const onSubmit = async (data: any) => {
   );
 };
 
-export default NewIncident;
+export default NewTask;

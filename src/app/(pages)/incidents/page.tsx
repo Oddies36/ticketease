@@ -20,7 +20,9 @@ const Incidents: React.FC = () => {
 
   useEffect(() => {
     const fetchLocations = async () => {
-      const res = await fetch("/api/groupes/available-locations?prefix=Support.Incidents.");
+      const res = await fetch(
+        "/api/groupes/available-locations?prefix=Support.Incidents."
+      );
       const data = await res.json();
       setLocations(data.locations);
     };
@@ -62,24 +64,28 @@ const Incidents: React.FC = () => {
         </Grid>
       </Grid>
 
-      <Box mt={5}>
-        <Typography variant="h6" gutterBottom>
-          Vos localisations :
-        </Typography>
-        <List>
-          {locations.map((loc) => (
-            <ListItem key={loc} disablePadding>
-              <ListItemButton
-                onClick={() =>
-                  router.push(`/incidents/${encodeURIComponent(loc)}`)
-                }
-              >
-                <ListItemText primary={loc} />
-              </ListItemButton>
-            </ListItem>
-          ))}
-        </List>
-      </Box>
+      {locations.length > 0 && (
+        <Box mt={5}>
+          <Typography variant="h6" gutterBottom>
+            Vos localisations :
+          </Typography>
+          <List>
+            {locations.map((loc) => (
+              <ListItem key={loc} disablePadding>
+                <ListItemButton
+                  onClick={() =>
+                    router.push(
+                      `/incidents/incident-list?localisation=${encodeURIComponent(loc)}`
+                    )
+                  }
+                >
+                  <ListItemText primary={loc} />
+                </ListItemButton>
+              </ListItem>
+            ))}
+          </List>
+        </Box>
+      )}
     </Box>
   );
 };

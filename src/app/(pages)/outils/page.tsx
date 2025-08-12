@@ -21,34 +21,42 @@ const Outils: React.FC = () => {
   const router = useRouter();
   const [modalType, setModalType] = useState<"user" | "group" | null>(null);
   const [locations, setLocations] = useState<string[] | null>(null);
+  const [groupIntent, setGroupIntent] = useState<"create" | "edit" | "delete" | null>(null);
+  const [userIntent, setUserIntent] = useState<"create" | "edit" | "delete" | null>(null);
 
   useEffect(() => {
-    if (!modalType) return;
+    if (!modalType) {
+      return;
+    }
 
-    const fetchLocations = async () => {
-      const prefix =
-        modalType === "user" ? "Gestion.Utilisateurs." : "Gestion.Groupes.";
+    async function fetchLocations() {
+      let prefix = "";
+      if (modalType === "user") {
+        prefix = "Gestion.Utilisateurs.";
+      } else {
+        prefix = "Gestion.Groupes.";
+      }
 
       try {
-        const result = await fetch(`/api/groupes/available-locations?prefix=${prefix}`);
+        const endpoint = `/api/groupes/available-locations?prefix=${prefix}`;
+        const result = await fetch(endpoint);
         const data = await result.json();
         setLocations(data.locations);
-      } catch {
+      } catch (e) {
         setLocations([]);
       }
-    };
+    }
 
     fetchLocations();
-  }, [modalType]);
+  }, [modalType, groupIntent, userIntent]);
 
-  const handleClose = () => {
+  function handleClose() {
     setModalType(null);
+    setGroupIntent(null);
+    setUserIntent(null);
     setLocations(null);
-  };
+  }
 
-  const handleNavigation = (path: string) => {
-    router.push(path);
-  };
   return (
     <Box>
       <Typography variant="h4" mb={3}>
@@ -66,18 +74,30 @@ const Outils: React.FC = () => {
               </Typography>
             </CardContent>
             <CardActions>
-              <Button size="small" onClick={() => setModalType("user")}>
+              <Button
+                size="small"
+                onClick={() => {
+                  setUserIntent("create");
+                  setModalType("user");
+                }}
+              >
                 Créer un utilisateur
               </Button>
               <Button
                 size="small"
-                onClick={() => router.push("/outils/users/edituser")}
+                onClick={() => {
+                  setUserIntent("edit");
+                  setModalType("user");
+                }}
               >
                 Modifier un utilisateur
               </Button>
               <Button
                 size="small"
-                onClick={() => router.push("/outils/users/deleteuser")}
+                onClick={() => {
+                  setUserIntent("delete");
+                  setModalType("user");
+                }}
               >
                 Supprimer un utilisateur
               </Button>
@@ -94,18 +114,30 @@ const Outils: React.FC = () => {
               </Typography>
             </CardContent>
             <CardActions>
-              <Button size="small" onClick={() => setModalType("group")}>
+              <Button
+                size="small"
+                onClick={() => {
+                  setGroupIntent("create");
+                  setModalType("group");
+                }}
+              >
                 Créer un groupe
               </Button>
               <Button
                 size="small"
-                onClick={() => router.push("/outils/groupes/editgroup")}
+                onClick={() => {
+                  setGroupIntent("edit");
+                  setModalType("group");
+                }}
               >
                 Modifier un groupe
               </Button>
               <Button
                 size="small"
-                onClick={() => router.push("/outils/groupes/deletegroup")}
+                onClick={() => {
+                  setGroupIntent("delete");
+                  setModalType("group");
+                }}
               >
                 Supprimer un groupe
               </Button>
@@ -117,7 +149,21 @@ const Outils: React.FC = () => {
       {/* MODAL COMMUN */}
       <Dialog open={!!modalType} onClose={handleClose} fullWidth>
         <DialogTitle>
-          {modalType === "user" ? "Créer un utilisateur" : "Créer un groupe"}
+          {modalType === "user"
+            ? userIntent === "create"
+              ? "Créer un utilisateur"
+              : userIntent === "edit"
+              ? "Modifier un utilisateur"
+              : userIntent === "delete"
+              ? "Supprimer un utilisateur"
+              : "Utilisateurs"
+            : groupIntent === "create"
+            ? "Créer un groupe"
+            : groupIntent === "edit"
+            ? "Modifier un groupe"
+            : groupIntent === "delete"
+            ? "Supprimer un groupe"
+            : "Groupes"}
         </DialogTitle>
         <DialogContent>
           {locations === null ? (
@@ -132,13 +178,33 @@ const Outils: React.FC = () => {
                 sx={{ my: 1 }}
                 onClick={() => {
                   if (modalType === "user") {
-                    router.push(
-                      `/outils/users/newuser?location=${encodeURIComponent(location)}`
-                    );
+                    if (userIntent === "create") {
+                      router.push(
+                        `/outils/users/newuser?location=${encodeURIComponent(location)}`
+                      );
+                    } else if (userIntent === "edit") {
+                      router.push(
+                        `/outils/users/edituser?location=${encodeURIComponent(location)}`
+                      );
+                    } else if (userIntent === "delete") {
+                      router.push(
+                        `/outils/users/deleteuser?location=${encodeURIComponent(location)}`
+                      );
+                    }
                   } else {
-                    router.push(
-                      `/outils/groupes/newgroup?location=${encodeURIComponent(location)}`
-                    );
+                    if (groupIntent === "create") {
+                      router.push(
+                        `/outils/groupes/newgroup?location=${encodeURIComponent(location)}`
+                      );
+                    } else if (groupIntent === "edit") {
+                      router.push(
+                        `/outils/groupes/editgroup?location=${encodeURIComponent(location)}`
+                      );
+                    } else if (groupIntent === "delete") {
+                      router.push(
+                        `/outils/groupes/deletegroup?location=${encodeURIComponent(location)}`
+                      );
+                    }
                   }
                 }}
               >

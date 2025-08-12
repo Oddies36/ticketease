@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import {
   Typography,
   Box,
@@ -15,123 +15,211 @@ import {
   FormControlLabel,
   Divider,
 } from "@mui/material";
-import { useForm, Controller, useWatch } from "react-hook-form";
-import { z } from "zod";
-import { zodResolver } from "@hookform/resolvers/zod";
-import { useSearchParams } from "next/navigation";
 
-const userSchema = z.object({
-  firstName: z
-    .string()
-    .min(1, "Le prénom est requis")
-    .regex(
-      /^[A-Z][a-z]*(-[A-Z][a-z]*)*$/,
-      "Le prénom doit commencer par une majuscule, les lettres après un tiret doivent être en majuscule, et ne doit pas contenir d'apostrophe"
-    ),
-  lastName: z
-    .string()
-    .min(1, "Le nom est requis")
-    .regex(
-      /^[A-Z][a-z]*(-[A-Z][a-z]*)*$/,
-      "Le nom doit commencer par une majuscule, les lettres après un tiret doivent être en majuscule, et ne doit pas contenir d'apostrophe"
-    ),
-  emailPrivate: z.string().email("Email privé invalide"),
-  password: z
-    .string()
-    .min(8, "Le mot de passe doit contenir au moins 8 caractères"),
-  confirmPassword: z
-    .string()
-    .min(8, "Le mot de passe doit contenir au moins 8 caractères"),
-  isAdmin: z.boolean().optional(),
-  mustChangePassword: z.boolean().optional(),
-});
-
-const Newuser: React.FC = () => {
+export default function Newuser() {
   const searchParams = useSearchParams();
-  const location = searchParams.get("location");
-
-  const [locationId, setLocationId] = useState<number>();
+  const locationName = searchParams.get("location") || "";
 
   const router = useRouter();
 
-  const {
-    control,
-    handleSubmit,
-    formState: { errors },
-  } = useForm({
-    resolver: zodResolver(userSchema),
-  });
+  // Form fields
+  const [firstName, setFirstName] = useState<string>("");
+  const [lastName, setLastName] = useState<string>("");
+  const [emailPrivate, setEmailPrivate] = useState<string>("");
+  const [password, setPassword] = useState<string>("");
+  const [confirmPassword, setConfirmPassword] = useState<string>("");
+  const [isAdmin, setIsAdmin] = useState<boolean>(false);
+  const [mustChangePassword, setMustChangePassword] = useState<boolean>(false);
+
+  const [locationId, setLocationId] = useState<number | null>(null);
+  const [emailExists, setEmailExists] = useState<boolean>(false);
+
+  // Errors
+  const [firstNameError, setFirstNameError] = useState<string>("");
+  const [lastNameError, setLastNameError] = useState<string>("");
+  const [emailPrivateError, setEmailPrivateError] = useState<string>("");
+  const [passwordError, setPasswordError] = useState<string>("");
+  const [confirmPasswordError, setConfirmPasswordError] = useState<string>("");
 
   useEffect(() => {
-    const fetchLocationId = async () => {
-      if (!location) return;
-      try {
-        const res = await fetch(`/api/locations?location=${location}`);
-        const data = await res.json();
-        setLocationId(data.id ?? null);
-      } catch (error) {
-        console.error("Problème lors de la récupération de l'ID:", error);
+    async function fetchLocationId() {
+      if (!locationName) {
+        setLocationId(null);
+        return;
       }
-    };
-    fetchLocationId();
-  }, [location]);
-
-  const onSubmit = async (data: any) => {
-    console.log(locationId);
-    console.log(location);
-    const submittedData = {
-      ...data,
-      locationId,
-    };
-    const response = await fetch("/api/users/new-user", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(submittedData),
-    });
-
-    const result = await response.json();
-    if (result.success) {
-      // const mailResponse = await fetch("/api/send-email", {
-      //   method: "POST",
-      //   headers: { "Content-Type": "application/json" },
-      //   body: JSON.stringify({
-      //     to: data.emailPrivate,
-      //     subject: "Votre mot de passe Ticketease",
-      //     html: "Votre mot de passe est: " + data.password,
-      //   }),
-      // });
-
-      router.push("/outils");
-    } else {
-      alert("Erreur: " + result.message);
+      try {
+        const res = await fetch(`/api/locations?location=${encodeURIComponent(locationName)}`);
+        const data = await res.json();
+        if (data && typeof data.id === "number") {
+          setLocationId(data.id);
+        } else {
+          setLocationId(null);
+        }
+      } catch (e) {
+        setLocationId(null);
+      }
     }
-  };
+    fetchLocationId();
+  }, [locationName]);
 
-  const firstName = useWatch({ control, name: "firstName" });
-  const lastName = useWatch({ control, name: "lastName" });
-  const [emailExists, setEmailExists] = useState(false);
+  function generateProMail() {
+    const f = firstName ? firstName.toLowerCase() : "";
+    const l = lastName ? lastName.toLowerCase() : "";
+    return f + "." + l + "@ticketease.be";
+  }
 
-  const generateProMail = () => {
-    return `${firstName?.toLowerCase() ?? ""}.${lastName?.toLowerCase() ?? ""}@ticketease.be`;
-  };
-
-  const handleCancel = () => {
-    router.push("/outils");
-  };
-
+  // check if pro email exists
   useEffect(() => {
     const email = generateProMail();
-    if (email) {
-      const checkEmailExists = async () => {
-        const response = await fetch(`/api/users/check-email?email=${email}`);
-        const data = await response.json();
-        setEmailExists(data.exists);
-      };
-
-      const debounceTimeout = setTimeout(checkEmailExists, 300);
-      return () => clearTimeout(debounceTimeout);
+    if (!email) {
+      setEmailExists(false);
+      return;
     }
+
+    let timeoutId: any = null;
+    async function checkEmail() {
+      try {
+        const response = await fetch(`/api/users/check-email?email=${encodeURIComponent(email)}`);
+        const data = await response.json();
+        if (data && typeof data.exists === "boolean") {
+          setEmailExists(data.exists);
+        } else {
+          setEmailExists(false);
+        }
+      } catch (e) {
+        setEmailExists(false);
+      }
+    }
+
+    timeoutId = setTimeout(checkEmail, 300);
+    return () => {
+      if (timeoutId) {
+        clearTimeout(timeoutId);
+      }
+    };
   }, [firstName, lastName]);
+
+  function validateNamesPattern(value: string) {
+    const regex = /^[A-Z][a-z]*(-[A-Z][a-z]*)*$/;
+    return regex.test(value);
+  }
+
+  function validateForm() {
+    let ok = true;
+
+    if (!firstName) {
+      setFirstNameError("Le prénom est requis");
+      ok = false;
+    } else {
+      if (!validateNamesPattern(firstName)) {
+        setFirstNameError(
+          "Le prénom doit commencer par une majuscule, les lettres après un tiret doivent être en majuscule, et ne doit pas contenir d'apostrophe"
+        );
+        ok = false;
+      } else {
+        setFirstNameError("");
+      }
+    }
+
+    if (!lastName) {
+      setLastNameError("Le nom est requis");
+      ok = false;
+    } else {
+      if (!validateNamesPattern(lastName)) {
+        setLastNameError(
+          "Le nom doit commencer par une majuscule, les lettres après un tiret doivent être en majuscule, et ne doit pas contenir d'apostrophe"
+        );
+        ok = false;
+      } else {
+        setLastNameError("");
+      }
+    }
+
+    if (!emailPrivate) {
+      setEmailPrivateError("Email privé invalide");
+      ok = false;
+    } else {
+      //email check
+      if (!emailPrivate.includes("@") || !emailPrivate.includes(".")) {
+        setEmailPrivateError("Email privé invalide");
+        ok = false;
+      } else {
+        setEmailPrivateError("");
+      }
+    }
+
+    if (!password || password.length < 8) {
+      setPasswordError("Le mot de passe doit contenir au moins 8 caractères");
+      ok = false;
+    } else {
+      setPasswordError("");
+    }
+
+    if (!confirmPassword || confirmPassword.length < 8) {
+      setConfirmPasswordError("Le mot de passe doit contenir au moins 8 caractères");
+      ok = false;
+    } else {
+      if (confirmPassword !== password) {
+        setConfirmPasswordError("Les mots de passe ne correspondent pas");
+        ok = false;
+      } else {
+        setConfirmPasswordError("");
+      }
+    }
+
+    if (emailExists) {
+      ok = false;
+      alert("L'email professionnel existe déjà. Choisissez un autre prénom/nom.");
+    }
+
+    if (!locationId) {
+      ok = false;
+      alert("Localisation inconnue.");
+    }
+
+    return ok;
+  }
+
+  async function handleCreate() {
+    const ok = validateForm();
+    if (!ok) {
+      return;
+    }
+
+    const payload: any = {
+      firstName: firstName,
+      lastName: lastName,
+      emailPrivate: emailPrivate,
+      password: password,
+      isAdmin: isAdmin,
+      mustChangePassword: mustChangePassword,
+      locationId: locationId,
+    };
+
+    try {
+      const response = await fetch("/api/users/new-user", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+
+      const result = await response.json();
+
+      if (result && result.success) {
+        router.push("/outils");
+      } else {
+        const msg = result && result.message ? result.message : "Erreur lors de la création de l'utilisateur.";
+        alert("Erreur: " + msg);
+      }
+    } catch (e) {
+      alert("Erreur réseau lors de la création de l'utilisateur.");
+    }
+  }
+
+  function handleCancel() {
+    router.push("/outils");
+  }
+
   return (
     <Box>
       <Typography variant="h4" mb={3}>
@@ -147,57 +235,42 @@ const Newuser: React.FC = () => {
             <CardContent>
               <Grid container spacing={2}>
                 <Grid size={{ xs: 12, md: 6 }}>
-                  <Controller
-                    name="firstName"
-                    control={control}
-                    render={({ field }) => (
-                      <TextField
-                        fullWidth
-                        label="Prénom"
-                        {...field}
-                        error={!!errors.firstName}
-                        helperText={errors.firstName?.message}
-                      />
-                    )}
+                  <TextField
+                    fullWidth
+                    label="Prénom"
+                    value={firstName}
+                    onChange={(e) => setFirstName(e.target.value)}
+                    error={!!firstNameError}
+                    helperText={firstNameError}
                   />
                 </Grid>
                 <Grid size={{ xs: 12, md: 6 }}>
-                  <Controller
-                    name="lastName"
-                    control={control}
-                    render={({ field }) => (
-                      <TextField
-                        fullWidth
-                        label="Nom"
-                        {...field}
-                        error={!!errors.lastName}
-                        helperText={errors.lastName?.message}
-                      />
-                    )}
+                  <TextField
+                    fullWidth
+                    label="Nom"
+                    value={lastName}
+                    onChange={(e) => setLastName(e.target.value)}
+                    error={!!lastNameError}
+                    helperText={lastNameError}
                   />
                 </Grid>
                 <Grid size={{ xs: 12, md: 6 }}>
                   <TextField
                     fullWidth
                     label="Localisation"
-                    value={location}
+                    value={locationName}
                     disabled
                     slotProps={{ inputLabel: { shrink: true } }}
                   />
                 </Grid>
                 <Grid size={{ xs: 12 }}>
-                  <Controller
-                    name="emailPrivate"
-                    control={control}
-                    render={({ field }) => (
-                      <TextField
-                        fullWidth
-                        label="Email privé"
-                        {...field}
-                        error={!!errors.emailPrivate}
-                        helperText={errors.emailPrivate?.message}
-                      />
-                    )}
+                  <TextField
+                    fullWidth
+                    label="Email privé"
+                    value={emailPrivate}
+                    onChange={(e) => setEmailPrivate(e.target.value)}
+                    error={!!emailPrivateError}
+                    helperText={emailPrivateError}
                   />
                 </Grid>
                 <Grid size={{ xs: 12 }}>
@@ -207,72 +280,58 @@ const Newuser: React.FC = () => {
                     variant="outlined"
                     disabled
                     value={generateProMail()}
+                    helperText={emailExists ? "Cet email professionnel existe déjà" : ""}
+                    error={emailExists}
                   />
                 </Grid>
                 <Grid size={{ xs: 12, md: 6 }}>
-                  <Controller
-                    name="password"
-                    control={control}
-                    render={({ field }) => (
-                      <TextField
-                        fullWidth
-                        type="password"
-                        label="Mot de passe"
-                        {...field}
-                        error={!!errors.password}
-                        helperText={errors.password?.message}
-                      />
-                    )}
+                  <TextField
+                    fullWidth
+                    type="password"
+                    label="Mot de passe"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    error={!!passwordError}
+                    helperText={passwordError}
                   />
                 </Grid>
                 <Grid size={{ xs: 12, md: 6 }}>
-                  <Controller
-                    name="confirmPassword"
-                    control={control}
-                    render={({ field }) => (
-                      <TextField
-                        fullWidth
-                        type="password"
-                        label="Confirmation du mot de passe"
-                        {...field}
-                        error={!!errors.confirmPassword}
-                        helperText={errors.confirmPassword?.message}
-                      />
-                    )}
+                  <TextField
+                    fullWidth
+                    type="password"
+                    label="Confirmation du mot de passe"
+                    value={confirmPassword}
+                    onChange={(e) => setConfirmPassword(e.target.value)}
+                    error={!!confirmPasswordError}
+                    helperText={confirmPasswordError}
                   />
                 </Grid>
                 <Grid size={{ xs: 9, md: 5 }}>
-                  <Controller
-                    name="isAdmin"
-                    control={control}
-                    render={({ field }) => (
-                      <FormControlLabel
-                        control={<Checkbox {...field} />}
-                        label="Administrateur ?"
+                  <FormControlLabel
+                    control={
+                      <Checkbox
+                        checked={isAdmin}
+                        onChange={(e) => setIsAdmin(e.target.checked)}
                       />
-                    )}
+                    }
+                    label="Administrateur ?"
                   />
                 </Grid>
                 <Grid size={{ xs: 9, md: 7 }}>
-                  <Controller
-                    name="mustChangePassword"
-                    control={control}
-                    render={({ field }) => (
-                      <FormControlLabel
-                        control={<Checkbox {...field} />}
-                        label="Doit changer au premier login"
+                  <FormControlLabel
+                    control={
+                      <Checkbox
+                        checked={mustChangePassword}
+                        onChange={(e) => setMustChangePassword(e.target.checked)}
                       />
-                    )}
+                    }
+                    label="Doit changer au premier login"
                   />
                 </Grid>
               </Grid>
             </CardContent>
             <CardActions sx={{ justifyContent: "flex-end" }}>
-              <Button
-                variant="contained"
-                color="primary"
-                onClick={handleSubmit(onSubmit)}
-              >
+              <Button variant="contained" color="primary" onClick={handleCreate}>
                 Créer l'utilisateur
               </Button>
               <Button variant="outlined" onClick={handleCancel}>
@@ -308,6 +367,4 @@ const Newuser: React.FC = () => {
       </Grid>
     </Box>
   );
-};
-
-export default Newuser;
+}
