@@ -1,58 +1,149 @@
 "use client";
 
-import React from "react";
+import React, { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 import {
   Box,
-  Button,
-  Grid,
   Typography,
+  Grid,
+  Card,
+  CardContent,
   TextField,
   Select,
   MenuItem,
+  Button,
+  CircularProgress,
   FormControl,
   InputLabel,
-  CircularProgress,
 } from "@mui/material";
-import { useForm, Controller } from "react-hook-form";
-import { useRouter } from "next/navigation";
 
-const NewIncident: React.FC = () => {
+type CategoryItem = { id: number; label: string };
+
+export default function NewIncidentPage() {
   const router = useRouter();
-  const {
-    control,
-    handleSubmit,
-    formState: { errors },
-  } = useForm();
 
-const onSubmit = async (data: any) => {
-  try {
-    const response = await fetch("/api/incidents/create-incident", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        title: data.title,
-        description: data.description,
-        impact: data.impact,
-        categorie: data.categorie,
-      }),
-    });
+  // form fields
+  const [title, setTitle] = useState<string>("");
+  const [impact, setImpact] = useState<string>("");
+  const [description, setDescription] = useState<string>("");
+  const [categorie, setCategorie] = useState<string>(""); // send label string as your API expects
 
-    if (!response.ok) {
-      const error = await response.json();
-      console.error("Erreur lors de la création :", error);
+  // data
+  const [categories, setCategories] = useState<CategoryItem[]>([]);
+  const [isLoading, setIsLoading] = useState<boolean>(true);
+
+  // simple errors
+  const [titleError, setTitleError] = useState<string>("");
+  const [impactError, setImpactError] = useState<string>("");
+  const [descriptionError, setDescriptionError] = useState<string>("");
+  const [categorieError, setCategorieError] = useState<string>("");
+
+  const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
+
+  useEffect(() => {
+    async function loadCategories() {
+      setIsLoading(true);
+      try {
+        const res = await fetch("/api/incidents/categories");
+        const data = await res.json();
+
+        const list: CategoryItem[] = [];
+        if (data && Array.isArray(data.categories)) {
+          for (let i = 0; i < data.categories.length; i++) {
+            const x = data.categories[i];
+            const item: CategoryItem = { id: x.id, label: x.label };
+            list.push(item);
+          }
+        }
+        setCategories(list);
+      } catch (e) {
+        setCategories([]);
+      }
+      setIsLoading(false);
+    }
+
+    loadCategories();
+  }, []);
+
+  function validate() {
+    let ok = true;
+
+    if (!title) {
+      setTitleError("Le titre est requis");
+      ok = false;
+    } else {
+      setTitleError("");
+    }
+
+    if (!impact) {
+      setImpactError("L'impact est requis");
+      ok = false;
+    } else {
+      setImpactError("");
+    }
+
+    if (!description) {
+      setDescriptionError("La description est requise");
+      ok = false;
+    } else {
+      setDescriptionError("");
+    }
+
+    if (!categorie) {
+      setCategorieError("La catégorie est requise");
+      ok = false;
+    } else {
+      setCategorieError("");
+    }
+
+    return ok;
+  }
+
+  async function handleCreate() {
+    const ok = validate();
+    if (!ok) {
       return;
     }
 
-    const createdIncident = await response.json();
-    console.log("Incident créé :", createdIncident);
-    router.push("/incidents");
+    setIsSubmitting(true);
 
-  } catch (error) {
-    console.error("Erreur lors de la requête :", error);
+    try {
+      const response = await fetch("/api/incidents/create-incident", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          title: title,
+          impact: impact, // "individuel" | "plusieurs" | "service" | "global"
+          description: description,
+          categorie: categorie, // label string (backend finds Category by label)
+        }),
+      });
+
+      if (!response.ok) {
+        const err = await response.json().catch(() => ({}));
+        const msg = err && err.error ? err.error : "Erreur lors de la création";
+        alert(msg);
+      } else {
+        await response.json().catch(() => ({}));
+        router.push("/incidents");
+      }
+    } catch (e) {
+      alert("Erreur réseau lors de la création");
+    }
+
+    setIsSubmitting(false);
   }
-};
+
+  if (isLoading) {
+    return (
+      <Box>
+        <Typography variant="h4" mb={3}>
+          Nouveau ticket d'incident
+        </Typography>
+        <CircularProgress />
+      </Box>
+    );
+  }
 
   return (
     <Box>
@@ -60,99 +151,104 @@ const onSubmit = async (data: any) => {
         Nouveau ticket d'incident
       </Typography>
 
-      <form onSubmit={handleSubmit(onSubmit)}>
-        <Grid container spacing={3}>
-          <Grid size={{ xs: 12, md: 6 }}>
-            <Controller
-              name="title"
-              control={control}
-              rules={{ required: "Le titre est requis" }}
-              render={({ field }) => (
-                <TextField
-                  {...field}
-                  fullWidth
-                  label="Titre"
-                  error={!!errors.titre}
-                />
-              )}
-            />
-          </Grid>
+      <Grid container spacing={3}>
+        <Grid size={{ xs: 12, md: 7 }}>
+          <Card sx={{ backgroundColor: "#f4f5f7" }}>
+            <CardContent>
+              <TextField
+                fullWidth
+                margin="dense"
+                label="Titre"
+                value={title}
+                onChange={(e) => setTitle(e.target.value)}
+                error={!!titleError}
+                helperText={titleError}
+              />
 
-          <Grid size={{ xs: 12, md: 6 }}>
-            <Controller
-              name="impact"
-              control={control}
-              rules={{ required: "L'impact est requis" }}
-              render={({ field }) => (
-                <FormControl fullWidth error={!!errors.impact}>
-                  <InputLabel>Impact</InputLabel>
-                  <Select {...field} label="Impact">
-                    <MenuItem value="individuel">
-                      Je suis le seul impacté
-                    </MenuItem>
-                    <MenuItem value="plusieurs">
-                      Plusieurs collègues sont impactés
-                    </MenuItem>
-                    <MenuItem value="service">
-                      Mon service entier est impacté
-                    </MenuItem>
-                    <MenuItem value="global">
-                      L'ensemble du site est impacté
-                    </MenuItem>
-                  </Select>
-                </FormControl>
-              )}
-            />
-          </Grid>
+              <FormControl fullWidth margin="dense" error={!!impactError}>
+                <InputLabel>Impact</InputLabel>
+                <Select
+                  label="Impact"
+                  value={impact}
+                  onChange={(e) => setImpact(String(e.target.value))}
+                >
+                  <MenuItem value="individuel">
+                    Je suis le seul impacté
+                  </MenuItem>
+                  <MenuItem value="plusieurs">
+                    Plusieurs collègues sont impactés
+                  </MenuItem>
+                  <MenuItem value="service">
+                    Mon service entier est impacté
+                  </MenuItem>
+                  <MenuItem value="global">
+                    L'ensemble du site est impacté
+                  </MenuItem>
+                </Select>
+              </FormControl>
+              {impactError ? (
+                <Typography variant="caption" color="error">
+                  {impactError}
+                </Typography>
+              ) : null}
 
-          <Grid size={{ xs: 12 }}>
-            <Controller
-              name="description"
-              control={control}
-              rules={{ required: "La description est requise" }}
-              render={({ field }) => (
-                <TextField
-                  {...field}
-                  fullWidth
-                  multiline
-                  minRows={4}
-                  label="Description"
-                  error={!!errors.description}
-                />
-              )}
-            />
-          </Grid>
+              <TextField
+                fullWidth
+                margin="dense"
+                label="Description"
+                value={description}
+                onChange={(e) => setDescription(e.target.value)}
+                error={!!descriptionError}
+                helperText={descriptionError}
+                multiline
+                minRows={4}
+              />
 
-          <Grid size={{ xs: 12, md: 6 }}>
-            <Controller
-              name="categorie"
-              control={control}
-              rules={{ required: "La catégorie est requise" }}
-              render={({ field }) => (
-                <FormControl fullWidth error={!!errors.categorie}>
-                  <InputLabel>Catégorie</InputLabel>
-                  <Select {...field} label="Catégorie">
-                    <MenuItem value="Réseau">Réseau</MenuItem>
-                    <MenuItem value="Matériel">Matériel</MenuItem>
-                    <MenuItem value="Logiciel">Logiciel</MenuItem>
-                    <MenuItem value="Accès">Accès</MenuItem>
-                    <MenuItem value="Autre">Autre</MenuItem>
-                  </Select>
-                  <Typography variant="caption" color="error"></Typography>
-                </FormControl>
-              )}
-            />
-          </Grid>
+              <FormControl fullWidth margin="dense" error={!!categorieError}>
+                <InputLabel>Catégorie</InputLabel>
+                <Select
+                  label="Catégorie"
+                  value={categorie}
+                  onChange={(e) => setCategorie(String(e.target.value))}
+                >
+                  {categories.length === 0 ? (
+                    <MenuItem value="" disabled>
+                      Aucune catégorie
+                    </MenuItem>
+                  ) : null}
+                  {categories.map((c) => (
+                    <MenuItem key={c.id} value={c.label}>
+                      {c.label}
+                    </MenuItem>
+                  ))}
+                </Select>
+              </FormControl>
+              {categorieError ? (
+                <Typography variant="caption" color="error">
+                  {categorieError}
+                </Typography>
+              ) : null}
 
-          <Grid size={{ xs: 12 }}>
-            <Button type="submit" variant="contained" color="primary">
-              Créer l'incident
-            </Button>
-          </Grid>
+              <Box sx={{ display: "flex", gap: 1, mt: 2 }}>
+                <Button
+                  variant="contained"
+                  onClick={handleCreate}
+                  disabled={isSubmitting}
+                >
+                  Créer l'incident
+                </Button>
+                <Button
+                  variant="outlined"
+                  onClick={() => router.back()}
+                  disabled={isSubmitting}
+                >
+                  Retour
+                </Button>
+              </Box>
+            </CardContent>
+          </Card>
         </Grid>
-      </form>
+      </Grid>
     </Box>
   );
-};
-
-export default NewIncident;
+}

@@ -1,83 +1,130 @@
-import { prisma } from "@/lib/prisma";
-import { getAuthenticatedUser } from "@/lib/auth";
-import { Box, Typography, List, ListItem, ListItemText } from "@mui/material";
+"use client";
 
-interface PageProps {
-  searchParams: { localisation?: string };
-}
+import React, { useEffect, useState } from "react";
+import { useSearchParams, useRouter } from "next/navigation";
+import {
+  Box,
+  Typography,
+  Paper,
+  Table,
+  TableHead,
+  TableRow,
+  TableCell,
+  TableBody,
+  CircularProgress,
+} from "@mui/material";
 
-export default async function IncidentListPage({ searchParams }: PageProps) {
-  const locationName = searchParams.localisation;
+type TicketRow = {
+  id: number;
+  number: string;
+  title: string;
+  creationDate: string;
+  status?: { label: string };
+  priority?: { label: string };
+  assignmentGroup?: { groupName: string | null };
+};
 
-  if (!locationName) {
-    return <Typography>Aucune localisation sélectionnée.</Typography>;
+export default function IncidentListPage() {
+  const router = useRouter();
+  const search = useSearchParams();
+  const locationName = search.get("localisation") || "";
+
+  const [loading, setLoading] = useState<boolean>(true);
+  const [tickets, setTickets] = useState<TicketRow[]>([]);
+  const [errorMessage, setErrorMessage] = useState<string>("");
+
+  useEffect(() => {
+    async function loadTickets() {
+      setLoading(true);
+      setErrorMessage("");
+
+      try {
+        const res = await fetch(
+          "/api/incidents/list-by-location?location=" +
+            encodeURIComponent(locationName)
+        );
+        if (!res.ok) {
+          const err = await res.json().catch(() => ({}));
+          setErrorMessage(
+            err.error || "Erreur lors du chargement des incidents."
+          );
+          setTickets([]);
+        } else {
+          const data = await res.json();
+          const list: TicketRow[] = data.tickets || [];
+          setTickets(list);
+        }
+      } catch (e) {
+        setErrorMessage("Erreur réseau.");
+        setTickets([]);
+      }
+
+      setLoading(false);
+    }
+
+    loadTickets();
+  }, [locationName]);
+
+  function openTicket(id: number) {
+    router.push("/incidents/ticket?id=" + String(id));
   }
 
-  const user = await getAuthenticatedUser();
-  if (!user) {
-    return <Typography>Utilisateur non authentifié.</Typography>;
+  if (loading) {
+    return (
+      <Box>
+        <Typography variant="h4" mb={3}>
+          Incidents — {locationName}
+        </Typography>
+        <CircularProgress />
+      </Box>
+    );
   }
-
-  const location = await prisma.location.findUnique({
-    where: { name: locationName },
-    select: { id: true, name: true },
-  });
-
-  if (!location) {
-    return <Typography>Localisation inconnue : {locationName}</Typography>;
-  }
-
-  // Vérifie que l’utilisateur a bien accès à cette localisation via un groupe support
-  const groupAccess = await prisma.groupUser.findFirst({
-    where: {
-      userId: user.id,
-      group: {
-        groupName: { startsWith: "Support.Incidents." },
-        locationId: location.id,
-      },
-    },
-  });
-
-  if (!groupAccess) {
-    return <Typography>Accès refusé à la localisation {location.name}. Veuillez faire une demande pour les accès.</Typography>;
-  }
-
-  const incidents = await prisma.ticket.findMany({
-    where: {
-      locationId: location.id,
-      type: "incident",
-    },
-    orderBy: { creationDate: "desc" },
-    select: {
-      id: true,
-      number: true,
-      title: true,
-      status: { select: { label: true } },
-      creationDate: true,
-    },
-  });
 
   return (
     <Box>
       <Typography variant="h4" mb={3}>
-        Incidents – {location.name}
+        Incidents — {locationName}
       </Typography>
 
-      <List>
-        {incidents.map((incident) => (
-          <ListItem key={incident.id}>
-            <ListItemText
-              primary={`${incident.number} - ${incident.title}`}
-              secondary={`Statut : ${incident.status.label} | Créé le : ${new Date(
-                incident.creationDate
-              ).toLocaleDateString()}`}
-            />
-          </ListItem>
-        ))}
-        {incidents.length === 0 && (
-          <Typography>Aucun incident pour cette localisation.</Typography>
-        )}
-      </List>
+      {errorMessage ? (
+        <Typography sx={{ mb: 2 }}>{errorMessage}</Typography>
+      ) : null}
+
+      <Paper sx={{ width: "100%" }}>
+        <Table>
+          <TableHead>
+            <TableRow>
+              <TableCell>Numéro</TableCell>
+              <TableCell>Titre</TableCell>
+              <TableCell>Statut</TableCell>
+              <TableCell>Priorité</TableCell>
+              <TableCell>Groupe</TableCell>
+              <TableCell>Créé le</TableCell>
+            </TableRow>
+          </TableHead>
+          <TableBody>
+            {tickets.map((t) => (
+              <TableRow
+                key={t.id}
+                hover
+                onClick={() => openTicket(t.id)}
+                style={{ cursor: "pointer" }}
+              >
+                <TableCell>{t.number}</TableCell>
+                <TableCell>{t.title}</TableCell>
+                <TableCell>{t.status ? t.status.label : "-"}</TableCell>
+                <TableCell>{t.priority ? t.priority.label : "-"}</TableCell>
+                <TableCell>
+                  {t.assignmentGroup ? t.assignmentGroup.groupName || "-" : "-"}
+                </TableCell>
+                <TableCell>
+                  {new Date(t.creationDate).toLocaleString()}
+                </TableCell>
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
+      </Paper>
     </Box>
   );
 }
