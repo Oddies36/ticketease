@@ -31,7 +31,7 @@ export async function sendEmailHtml(
 }
 
 /**
- * Modèle d’email de bienvenue.
+ * Email de bienvenu.
  */
 export function resendEmail(
   firstName: string,
