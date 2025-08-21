@@ -2,12 +2,16 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import bcrypt from "bcryptjs";
 import { getAuthenticatedUser } from "@/lib/auth";
+import { sendEmailHtml, resendEmail } from "@/lib/resend";
 
 export async function POST(request: Request) {
   try {
     const me = await getAuthenticatedUser();
     if (!me) {
-      return NextResponse.json({ success: false, message: "Non authentifié" }, { status: 401 });
+      return NextResponse.json(
+        { success: false, message: "Non authentifié" },
+        { status: 401 }
+      );
     }
 
     const body = await request.json();
@@ -20,7 +24,10 @@ export async function POST(request: Request) {
     const locationId = body.locationId;
 
     if (!firstName || !lastName || !emailPrivate || !password || !locationId) {
-      return NextResponse.json({ success: false, message: "Paramètres manquants." }, { status: 400 });
+      return NextResponse.json(
+        { success: false, message: "Paramètres manquants." },
+        { status: 400 }
+      );
     }
 
     const location = await prisma.location.findUnique({
@@ -28,7 +35,10 @@ export async function POST(request: Request) {
     });
 
     if (!location) {
-      return NextResponse.json({ success: false, message: "Localisation inconnue." }, { status: 400 });
+      return NextResponse.json(
+        { success: false, message: "Localisation inconnue." },
+        { status: 400 }
+      );
     }
 
     const guardGroupName = "Gestion.Utilisateurs." + location.name;
@@ -39,7 +49,10 @@ export async function POST(request: Request) {
     });
 
     if (!guardGroup) {
-      return NextResponse.json({ success: false, message: "Accès refusé." }, { status: 403 });
+      return NextResponse.json(
+        { success: false, message: "Accès refusé." },
+        { status: 403 }
+      );
     }
 
     const guardMembership = await prisma.groupUser.findUnique({
@@ -47,7 +60,10 @@ export async function POST(request: Request) {
     });
 
     if (!guardMembership) {
-      return NextResponse.json({ success: false, message: "Accès refusé." }, { status: 403 });
+      return NextResponse.json(
+        { success: false, message: "Accès refusé." },
+        { status: 403 }
+      );
     }
 
     const emailProfessional = `${firstName.toLowerCase()}.${lastName.toLowerCase()}@ticketease.be`;
@@ -57,7 +73,10 @@ export async function POST(request: Request) {
     });
 
     if (existingUser) {
-      return NextResponse.json({ success: false, message: "Cet email existe déjà." });
+      return NextResponse.json({
+        success: false,
+        message: "Cet email existe déjà.",
+      });
     }
 
     const hashedPassword = await bcrypt.hash(password, 10);
@@ -75,8 +94,26 @@ export async function POST(request: Request) {
       },
     });
 
-    return NextResponse.json({ success: true, message: "Utilisateur créé avec succès." });
+    const html = resendEmail(firstName, lastName, emailProfessional, password);
+
+    try {
+      await sendEmailHtml(
+        emailPrivate,
+        "Votre compte TicketEase a été créé",
+        html
+      );
+    } catch (e) {
+      console.error("Erreur d'envoi de mail (new-user):", e);
+    }
+
+    return NextResponse.json({
+      success: true,
+      message: "Utilisateur créé avec succès.",
+    });
   } catch (error) {
-    return NextResponse.json({ success: false, message: "Erreur lors de la création de l'utilisateur." });
+    return NextResponse.json({
+      success: false,
+      message: "Erreur lors de la création de l'utilisateur.",
+    });
   }
 }
