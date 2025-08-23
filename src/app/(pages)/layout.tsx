@@ -32,19 +32,25 @@ import { authRedirect } from "@/app/components/authRedirect";
 
 const drawerWidth = 240;
 
-export default function PagesLayout({
-  children,
-}: {
-  children: React.ReactNode;
-}) {
+/**
+ * Layout globale qui protège toutes les pages sous app/(pages)
+ * Vérifie l'authentification avec authRedirect
+ * Fournit un layout commun
+ * Injecte la page courante dans children
+ */
+export default function PagesLayout({children,}: {children: React.ReactNode;}) {
+  //Vérifie l'authentification
   const { loading, user } = authRedirect();
   const router = useRouter();
+  /**On cherche l'état de l'utilisateur dans le store et on applique clearUser ce qui le met à null
+   * Utilisé pour le logout
+   */
   const clearUser = useUserStore((state) => state.clearUser);
 
   const theme = useTheme();
   const isMdUp = useMediaQuery(theme.breakpoints.up("md"));
 
-  // mobile drawer open/close
+  // Drawer pour une version responsive
   const [mobileOpen, setMobileOpen] = React.useState(false);
   const handleDrawerToggle = () => setMobileOpen((prev) => !prev);
 
@@ -278,7 +284,7 @@ export default function PagesLayout({
           </Toolbar>
         </AppBar>
 
-        {/* content */}
+        {/* contenu des pages */}
         <Box component="main" sx={{ mt: 8, p: { xs: 2, md: 3 } }}>
           {children}
         </Box>

@@ -94,7 +94,6 @@ export default function CmdbPage() {
 
   useEffect(() => {
     loadComputers();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [page]);
 
   useEffect(() => {
@@ -109,7 +108,6 @@ export default function CmdbPage() {
     return () => {
       clearTimeout(timer);
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [searchText]);
 
   function goPrev() {

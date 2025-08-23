@@ -3,11 +3,13 @@ import { prisma } from "@/lib/prisma";
 import { getAuthenticatedUser } from "@/lib/auth";
 
 export async function POST(request: Request) {
+  //Vérifie l'utilisateur connecté à partir du cookie JWT
   const user = await getAuthenticatedUser();
+  //Récupère les informations du frontend
   const { impact, description, categorie, title } = await request.json();
-  try {
 
-    //Number
+  try {
+    //Génération du numéro d'incident en fonction du dernier dans la DB
     const lastIncident = await prisma.ticket.findFirst({
       where: { type: "incident" },
       orderBy: { creationDate: "desc" },
@@ -79,7 +81,6 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "L'utilisateur n'a pas de localisation définie" }, { status: 400 });
     }
 
-
     //AssignmentGroupId
     const groupName = "Support.Incidents.";
     const assignmentGroupId = await prisma.group.findFirst({
@@ -102,22 +103,14 @@ export async function POST(request: Request) {
 
     const responseDate = new Date(Date.now() + (responseTime?.responseTime ?? 0) * 60 * 1000);
 
+    //Utilise pour les tâches
     const additionalInfo = null;
-
-console.log("statusId:", statusId);
-console.log("getPriorityId:", getPriorityId);
-console.log("categoryId:", categoryId);
-console.log("createdBy:", createdBy);
-console.log("user.locationId:", user?.locationId);
 
     if (!statusId?.id || !getPriorityId?.id || !categoryId?.id || !createdBy || !user?.locationId) {
       return NextResponse.json({ error: "Champs requis manquants pour la création du ticket" }, { status: 400 });
     }
 
-
-
-
-
+    //Création de l'incident avec prisma
     await prisma.ticket.create({
       data: {
         number: newIncident,
@@ -144,8 +137,6 @@ console.log("user.locationId:", user?.locationId);
         additionalInfo: additionalInfo
       }
     })
-
-    
 
     return NextResponse.json({ message: "Incident créé avec succès" }, { status: 201 });
   } catch (error) {

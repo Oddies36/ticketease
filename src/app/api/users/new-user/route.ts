@@ -81,7 +81,7 @@ export async function POST(request: Request) {
 
     const hashedPassword = await bcrypt.hash(password, 10);
 
-    await prisma.user.create({
+    const newUser = await prisma.user.create({
       data: {
         firstName: firstName,
         lastName: lastName,
@@ -94,17 +94,44 @@ export async function POST(request: Request) {
       },
     });
 
-    const html = resendEmail(firstName, lastName, emailProfessional, password);
+    if(newUser.isAdmin){
+      const groups = await prisma.group.findMany({
+        select: {
+          id: true
+        }
+      });
 
-    try {
-      await sendEmailHtml(
-        emailPrivate,
-        "Votre compte TicketEase a été créé",
-        html
-      );
-    } catch (e) {
-      console.error("Erreur d'envoi de mail (new-user):", e);
+      if(groups.length > 0){
+        await prisma.groupUser.createMany({
+          data: groups.map((g) => ({
+            userId: newUser.id,
+            groupId: g.id,
+            isAdmin: true
+          })),
+          skipDuplicates: true
+        });
+
+        await prisma.groupUser.updateMany({
+          where: { userId: newUser.id },
+          data: { isAdmin: true }
+        })
+      }
+
+
     }
+
+    
+    // const html = resendEmail(firstName, lastName, emailProfessional, password);
+
+    // try {
+    //   await sendEmailHtml(
+    //     emailPrivate,
+    //     "Votre compte TicketEase a été créé",
+    //     html
+    //   );
+    // } catch (e) {
+    //   console.error("Erreur d'envoi de mail (new-user):", e);
+    // }
 
     return NextResponse.json({
       success: true,
