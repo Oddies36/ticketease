@@ -1,6 +1,21 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getAuthenticatedUser } from "@/lib/auth";
+import { z } from "zod";
+
+const TaskCreateSchema = z.object({
+  title: z.string().trim().min(5),
+  description: z.string().trim().min(5),
+  categorie: z.enum([
+    "Demande de laptop",
+    "Demande de desktop",
+    "Demande de matériel supplémentaire",
+    "Création d'un nouvel utilisateur",
+    "Création d'un nouveau groupe",
+  ]),
+  demandePour: z.string().trim().min(3),
+  informationsAdditionnelles: z.string().trim().optional(),
+});
 
 export async function POST(req: Request) {
   const me = await getAuthenticatedUser();
@@ -9,26 +24,34 @@ export async function POST(req: Request) {
   }
 
   try {
-    const body = await req.json();
-
-    const title = String(body.title || "").trim();
-    const description = String(body.description || "").trim();
-    const categorie = String(body.categorie || "").trim();
-    const demandePour = body.demandePour ? String(body.demandePour) : null;
-    const informationsAdditionnelles = body.informationsAdditionnelles ? String(body.informationsAdditionnelles) : null;
-
-    if (!title || !description || !categorie) {
-      return NextResponse.json({ error: "Champs requis manquants" }, { status: 400 });
+    // Parse JSON + validation Zod
+    const parsed = TaskCreateSchema.safeParse(await req.json());
+    if (!parsed.success) {
+      // tu gardes ton message générique
+      return NextResponse.json(
+        { error: "Champs requis manquants" },
+        { status: 400 }
+      );
     }
+    const {
+      title,
+      description,
+      categorie,
+      demandePour,
+      informationsAdditionnelles,
+    } = parsed.data;
 
     if (!me.locationId) {
-      return NextResponse.json({ error: "Localisation utilisateur manquante" }, { status: 400 });
+      return NextResponse.json(
+        { error: "Localisation utilisateur manquante" },
+        { status: 400 }
+      );
     }
 
     const lastTask = await prisma.ticket.findFirst({
       where: { type: "task" },
       orderBy: { creationDate: "desc" },
-      select: { number: true }
+      select: { number: true },
     });
 
     let newNumber = "TSK000001";
@@ -42,35 +65,44 @@ export async function POST(req: Request) {
 
     const status = await prisma.status.findUnique({
       where: { label: "Ouvert" },
-      select: { id: true }
+      select: { id: true },
     });
     if (!status || !status.id) {
-      return NextResponse.json({ error: "Statut 'Ouvert' introuvable" }, { status: 400 });
+      return NextResponse.json(
+        { error: "Statut 'Ouvert' introuvable" },
+        { status: 400 }
+      );
     }
 
     const category = await prisma.category.findFirst({
       where: { label: categorie },
-      select: { id: true }
+      select: { id: true },
     });
     if (!category || !category.id) {
-      return NextResponse.json({ error: "Catégorie introuvable" }, { status: 400 });
+      return NextResponse.json(
+        { error: "Catégorie introuvable" },
+        { status: 400 }
+      );
     }
 
     const priority = await prisma.priority.findUnique({
       where: { label: "Moyenne" },
-      select: { id: true }
+      select: { id: true },
     });
     if (!priority || !priority.id) {
-      return NextResponse.json({ error: "Priorité par défaut introuvable" }, { status: 400 });
+      return NextResponse.json(
+        { error: "Priorité par défaut introuvable" },
+        { status: 400 }
+      );
     }
 
     // ICI: préfixe correct
     const assignmentGroup = await prisma.group.findFirst({
       where: {
         groupName: { startsWith: "Support.Taches." },
-        locationId: me.locationId
+        locationId: me.locationId,
       },
-      select: { id: true }
+      select: { id: true },
     });
 
     const approverId = me.managerId ? me.managerId : me.id;
@@ -107,12 +139,15 @@ export async function POST(req: Request) {
         isBreached: false,
         responseDate: null,
 
-        additionalInfo: informationsAdditionnelles
+        additionalInfo: informationsAdditionnelles,
       },
-      select: { id: true, number: true }
+      select: { id: true, number: true },
     });
 
-    return NextResponse.json({ success: true, ticket: created }, { status: 201 });
+    return NextResponse.json(
+      { success: true, ticket: created },
+      { status: 201 }
+    );
   } catch (e) {
     console.error("Erreur création task:", e);
     return NextResponse.json({ error: "Erreur serveur" }, { status: 500 });

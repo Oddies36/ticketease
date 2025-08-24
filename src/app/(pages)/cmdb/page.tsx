@@ -130,7 +130,7 @@ export default function CmdbPage() {
   return (
     <Box>
       <Typography variant="h4" mb={3}>
-        CMDB — Ordinateurs
+        CMDB - Ordinateurs
       </Typography>
 
       <Grid container spacing={2} alignItems="center" sx={{ mb: 2 }}>

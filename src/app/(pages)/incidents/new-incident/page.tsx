@@ -111,6 +111,9 @@ export default function NewIncidentPage() {
     if (!title) {
       setTitleError("Le titre est requis");
       ok = false;
+    } else if (title.trim().length < 5) {
+      setTitleError("Minimum 5 caractères");
+      ok = false;
     } else {
       setTitleError("");
     }
@@ -124,6 +127,9 @@ export default function NewIncidentPage() {
 
     if (!description) {
       setDescriptionError("La description est requise");
+      ok = false;
+    } else if (description.trim().length < 5) {
+      setDescriptionError("Minimum 5 caractères");
       ok = false;
     } else {
       setDescriptionError("");
@@ -155,9 +161,9 @@ export default function NewIncidentPage() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          title: title,
+          title: title.trim(),
           impact: impact, // "individuel" | "plusieurs" | "service" | "global"
-          description: description,
+          description: description.trim(),
           categorie: categorie, // label de catégorie (recherche côté backend)
         }),
       });

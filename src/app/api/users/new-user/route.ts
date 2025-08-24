@@ -3,6 +3,23 @@ import { prisma } from "@/lib/prisma";
 import bcrypt from "bcryptjs";
 import { getAuthenticatedUser } from "@/lib/auth";
 import { sendEmailHtml, resendEmail } from "@/lib/resend";
+import { z } from "zod";
+
+const NameSchema = z
+  .string()
+  .trim()
+  .min(1)
+  .regex(/^[A-Z][a-z]*(?:-[A-Z][a-z]*)*$/, "Nom invalide");
+
+const UserCreateSchema = z.object({
+  firstName: NameSchema,
+  lastName: NameSchema,
+  emailPrivate: z.string().trim().email(),
+  password: z.string().min(8),
+  isAdmin: z.boolean().optional().default(false),
+  mustChangePassword: z.boolean().optional().default(false),
+  locationId: z.coerce.number().int().positive(),
+});
 
 export async function POST(request: Request) {
   try {
@@ -14,21 +31,33 @@ export async function POST(request: Request) {
       );
     }
 
-    const body = await request.json();
-    const firstName = body.firstName;
-    const lastName = body.lastName;
-    const emailPrivate = body.emailPrivate;
-    const password = body.password;
-    const isAdmin = body.isAdmin || false;
-    const mustChangePassword = body.mustChangePassword || false;
-    const locationId = body.locationId;
-
-    if (!firstName || !lastName || !emailPrivate || !password || !locationId) {
+    let body: unknown;
+    try {
+      body = await request.json();
+    } catch {
       return NextResponse.json(
         { success: false, message: "Paramètres manquants." },
         { status: 400 }
       );
     }
+
+    const parsed = UserCreateSchema.safeParse(body);
+    if (!parsed.success) {
+      return NextResponse.json(
+        { success: false, message: "Paramètres manquants." },
+        { status: 400 }
+      );
+    }
+
+    const {
+      firstName,
+      lastName,
+      emailPrivate,
+      password,
+      isAdmin,
+      mustChangePassword,
+      locationId,
+    } = parsed.data;
 
     const location = await prisma.location.findUnique({
       where: { id: Number(locationId) },
@@ -94,33 +123,30 @@ export async function POST(request: Request) {
       },
     });
 
-    if(newUser.isAdmin){
+    if (newUser.isAdmin) {
       const groups = await prisma.group.findMany({
         select: {
-          id: true
-        }
+          id: true,
+        },
       });
 
-      if(groups.length > 0){
+      if (groups.length > 0) {
         await prisma.groupUser.createMany({
           data: groups.map((g) => ({
             userId: newUser.id,
             groupId: g.id,
-            isAdmin: true
+            isAdmin: true,
           })),
-          skipDuplicates: true
+          skipDuplicates: true,
         });
 
         await prisma.groupUser.updateMany({
           where: { userId: newUser.id },
-          data: { isAdmin: true }
-        })
+          data: { isAdmin: true },
+        });
       }
-
-
     }
 
-    
     // const html = resendEmail(firstName, lastName, emailProfessional, password);
 
     // try {

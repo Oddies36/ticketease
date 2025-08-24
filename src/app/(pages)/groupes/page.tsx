@@ -13,6 +13,7 @@ import {
   Fade,
   CircularProgress,
   TextField,
+  Chip,
 } from "@mui/material";
 import Autocomplete from "@mui/material/Autocomplete";
 import { authRedirect } from "@/app/components/authRedirect";
@@ -69,9 +70,29 @@ const Groupes: React.FC = () => {
     fetchGroups();
   }, [user]);
 
+  // Helpers d'analyse du nom
+  const getParts = (name: string) => name.split(".").filter(Boolean);
+  const getLocation = (name: string) => {
+    const parts = getParts(name);
+    return parts[parts.length - 1] || name;
+  };
+  const getDomain = (name: string) => {
+    const parts = getParts(name);
+    // On garde seulement "Support" ou "Gestion" si présent en 1er segment
+    return parts[0] === "Support" || parts[0] === "Gestion" ? parts[0] : "";
+  };
+
+  // Tri alphabétique asc sur la localisation (dernier segment)
+  const sortedGroups = [...memberGroups].sort((a, b) =>
+    getLocation(a.groupName).localeCompare(getLocation(b.groupName), "fr", {
+      sensitivity: "base",
+    })
+  );
+
+  // Est-ce que l'utilisateur courant est admin du groupe sélectionné ?
   const isCurrentUserAdmin = () => {
     if (!selectedGroup) return false;
-    // on considère que l’API classe aussi les groupes "owner" dans adminGroups
+    // l’API classe aussi les groupes "owner" dans adminGroups
     return adminGroups.some((g) => g.id === selectedGroup.id);
   };
 
@@ -192,7 +213,7 @@ const Groupes: React.FC = () => {
 
   if (loading || !user) return null;
 
-  // Compte d’admins du groupe (pour désactiver la suppression du dernier admin)
+  // Nombre d’admins (pour désactiver la suppression du dernier admin)
   const adminCount = groupUsers.filter((u) => u.isAdmin).length;
 
   return (
@@ -201,33 +222,70 @@ const Groupes: React.FC = () => {
         Mes groupes
       </Typography>
 
-      <List>
-        {memberGroups.length === 0 && (
-          <ListItem>Aucun groupe rejoint.</ListItem>
-        )}
-        {memberGroups.map((group) => (
-          <ListItem
-            key={group.id}
-            sx={{ display: "flex", justifyContent: "space-between" }}
-          >
-            {group.groupName}
-            <Box sx={{ display: "flex", gap: 1 }}>
-              <Button
-                size="small"
-                onClick={() => handleOpenModal(group, "admins")}
-              >
-                Voir les administrateurs
-              </Button>
-              <Button
-                size="small"
-                onClick={() => handleOpenModal(group, "members")}
-              >
-                Voir les membres
-              </Button>
-            </Box>
-          </ListItem>
-        ))}
-      </List>
+      {sortedGroups.length === 0 ? (
+        <Typography>Aucun groupe rejoint.</Typography>
+      ) : (
+        <List sx={{ width: "100%" }}>
+          {sortedGroups.map((group, idx) => {
+            const location = getLocation(group.groupName);
+            const domain = getDomain(group.groupName);
+
+            return (
+              <React.Fragment key={group.id}>
+                <ListItem
+                  sx={{
+                    // layout principal
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 1,
+                    // responsive : actions passent en dessous sur mobile
+                    flexWrap: "wrap",
+                    py: 1,
+                  }}
+                >
+                  {/* Bloc gauche : nom + chips */}
+                  <Box
+                    sx={{
+                      display: "flex",
+                      alignItems: "center",
+                      gap: 1,
+                      flexGrow: 1,
+                      minWidth: 260,
+                    }}
+                  >
+                    <Typography>{group.groupName}</Typography>
+                  </Box>
+
+                  {/* Bloc droit : actions (à droite sur md+, en-dessous sur xs) */}
+                  <Box
+                    sx={{
+                      display: "flex",
+                      gap: 1,
+                      justifyContent: { xs: "flex-start", sm: "flex-end" },
+                      width: { xs: "100%", sm: "auto" },
+                    }}
+                  >
+                    <Button
+                      size="small"
+                      onClick={() => handleOpenModal(group, "admins")}
+                    >
+                      Voir les administrateurs
+                    </Button>
+                    <Button
+                      size="small"
+                      onClick={() => handleOpenModal(group, "members")}
+                    >
+                      Voir les membres
+                    </Button>
+                  </Box>
+                </ListItem>
+
+                {idx < sortedGroups.length - 1 && <Divider component="li" />}
+              </React.Fragment>
+            );
+          })}
+        </List>
+      )}
 
       {/* MODAL */}
       <Modal
@@ -244,11 +302,12 @@ const Groupes: React.FC = () => {
               top: "50%",
               left: "50%",
               transform: "translate(-50%, -50%)",
-              width: 480,
+              width: 520,
+              maxWidth: "90vw",
               bgcolor: "background.paper",
               borderRadius: 2,
               boxShadow: 24,
-              p: 4,
+              p: 3,
             }}
           >
             <Typography variant="h6" mb={2}>
@@ -262,7 +321,6 @@ const Groupes: React.FC = () => {
             ) : groupUsers.length === 0 ? (
               <Typography>Aucun utilisateur trouvé.</Typography>
             ) : modalType === "admins" ? (
-              // Liste "admins"
               groupUsers
                 .filter((u) => u.isAdmin)
                 .map((u) => (
@@ -273,6 +331,8 @@ const Groupes: React.FC = () => {
                       alignItems: "center",
                       justifyContent: "space-between",
                       mb: 1,
+                      gap: 1,
+                      flexWrap: "wrap",
                     }}
                   >
                     <Typography>
@@ -284,7 +344,7 @@ const Groupes: React.FC = () => {
                         color="error"
                         variant="outlined"
                         onClick={() => handleRemoveUser(u.id)}
-                        disabled={adminCount <= 1} // empêche de retirer le dernier admin
+                        disabled={adminCount <= 1}
                       >
                         Retirer
                       </Button>
@@ -292,7 +352,6 @@ const Groupes: React.FC = () => {
                   </Box>
                 ))
             ) : (
-              // Liste "members"
               groupUsers.map((u) => (
                 <Box
                   key={u.id}
@@ -301,6 +360,8 @@ const Groupes: React.FC = () => {
                     alignItems: "center",
                     justifyContent: "space-between",
                     mb: 1,
+                    gap: 1,
+                    flexWrap: "wrap",
                   }}
                 >
                   <Typography>
