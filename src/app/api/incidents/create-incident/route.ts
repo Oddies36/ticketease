@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getAuthenticatedUser } from "@/lib/auth";
 import { z } from "zod";
@@ -121,6 +121,10 @@ export async function POST(request: Request) {
       select: { id: true },
     });
 
+    if(!assignmentGroupId?.id){
+      return NextResponse.json( { error: "Votre localisation n'a pas de groupe de support. Veuillez contacter votre administrateur."}, { status: 400 });
+    }
+
     const creationDate = new Date();
     const updateDate = new Date();
     const closedDate = null;
@@ -138,7 +142,7 @@ export async function POST(request: Request) {
       Date.now() + (responseTime?.responseTime ?? 0) * 60 * 1000
     );
 
-    //Utilise pour les tâches
+    //Utilisé pour les tâches
     const additionalInfo = null;
 
     if (!statusId?.id || !getPriorityId?.id || !categoryId?.id || !createdBy) {

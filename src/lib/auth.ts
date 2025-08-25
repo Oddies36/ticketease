@@ -11,7 +11,7 @@ export async function getAuthenticatedUser() {
   if (!token) return null;
 
   try {
-    //On vérifie le toket et on récupère l'id
+    //On vérifie le token et on récupère l'id
     const payload = jwt.verify(token, JWT_SECRET) as { userId: number };
     //On recharge l'utilisateur complet depuis la base de données
     const user = await prisma.user.findUnique({

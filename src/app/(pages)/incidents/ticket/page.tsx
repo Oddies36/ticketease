@@ -522,7 +522,9 @@ export default function TicketPage() {
                 }}
                 displayEmpty
               >
-                <MenuItem value="">Non assigné</MenuItem>
+                  <MenuItem value="" disabled>
+                    <em>Sélectionner</em>
+                  </MenuItem>
                 {users.map((u) => (
                   <MenuItem key={u.id} value={u.id}>
                     {u.firstName} {u.lastName}
