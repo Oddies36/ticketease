@@ -1,22 +1,27 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
 import {
   Box,
   Typography,
-  Grid,
   Paper,
-  TextField,
-  Button,
   Table,
   TableHead,
   TableRow,
   TableCell,
   TableBody,
+  TableSortLabel,
+  Toolbar,
+  TextField,
+  InputAdornment,
+  TableContainer,
+  TablePagination,
+  Button,
   CircularProgress,
 } from "@mui/material";
+import SearchIcon from "@mui/icons-material/Search";
 
+// Ordinateur renvoyé par l'API CMDB
 type ComputerRow = {
   id: number;
   computerName: string;
@@ -26,165 +31,187 @@ type ComputerRow = {
   createdAt?: string | null;
 };
 
+// Sens du tri pour les tableaux
+type Order = "asc" | "desc";
+
 export default function CmdbPage() {
-  const router = useRouter();
-
   const [items, setItems] = useState<ComputerRow[]>([]);
-  const [total, setTotal] = useState<number>(0);
+  const [searchText, setSearchText] = useState("");
+  const [orderBy, setOrderBy] = useState<keyof ComputerRow>("computerName");
+  const [order, setOrder] = useState<Order>("asc");
+  const [page, setPage] = useState(0);
+  const rowsPerPage = 10;
 
-  const [searchText, setSearchText] = useState<string>("");
-  const [loading, setLoading] = useState<boolean>(true);
-  const [errorMessage, setErrorMessage] = useState<string>("");
+  const [loading, setLoading] = useState(true);
+  const [accessDenied, setAccessDenied] = useState(false);
 
-  const [page, setPage] = useState<number>(1);
-  const pageSize = 10;
+  // Charge les ordinateurs depuis l'api
+  useEffect(() => {
+    const fetchData = async () => {
+      setLoading(true);
+      try {
+        const url =
+          "/api/cmdb/computers?search=" +
+          encodeURIComponent(searchText) +
+          "&page=" +
+          String(page + 1) +
+          "&pageSize=" +
+          String(rowsPerPage);
 
-  async function loadComputers() {
-    setLoading(true);
-    setErrorMessage("");
+        const res = await fetch(url);
+        if (res.status === 403) {
+          setAccessDenied(true);
+          setItems([]);
+          setLoading(false);
+          return;
+        }
 
-    try {
-      const url =
-        "/api/cmdb/computers?search=" +
-        encodeURIComponent(searchText) +
-        "&page=" +
-        String(page) +
-        "&pageSize=" +
-        String(pageSize);
+        if (!res.ok) {
+          setItems([]);
+          setLoading(false);
+          return;
+        }
 
-      const res = await fetch(url);
-      if (!res.ok) {
-        const err = await res.json().catch(() => ({}));
-        const msg =
-          (err && err.error) || "Erreur lors du chargement des ordinateurs.";
-        setErrorMessage(msg);
-        setItems([]);
-        setTotal(0);
-      } else {
         const data = await res.json();
-        const list: ComputerRow[] = [];
         if (data && Array.isArray(data.items)) {
-          for (let i = 0; i < data.items.length; i++) {
-            const c = data.items[i];
-            list.push({
-              id: c.id,
-              computerName: c.computerName,
-              serialNumber: c.serialNumber,
-              assignedTo: c.assignedTo || null,
-              assignedAt: c.assignedAt || null,
-              createdAt: c.createdAt || null,
-            });
-          }
-        }
-        setItems(list);
-        if (typeof data.total === "number") {
-          setTotal(data.total);
+          setItems(data.items);
         } else {
-          setTotal(0);
+          setItems([]);
         }
+      } catch {
+        setItems([]);
       }
-    } catch (e) {
-      setErrorMessage("Erreur réseau.");
-      setItems([]);
-      setTotal(0);
-    }
-
-    setLoading(false);
-  }
-
-  useEffect(() => {
-    loadComputers();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [page]);
-
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      if (page !== 1) {
-        setPage(1);
-      } else {
-        loadComputers();
-      }
-    }, 400);
-
-    return () => {
-      clearTimeout(timer);
+      setLoading(false);
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [searchText]);
 
-  function goPrev() {
-    if (page > 1) {
-      setPage(page - 1);
+    fetchData();
+  }, [page, searchText]);
+
+  // Gère le tri
+  const handleSort = (property: keyof ComputerRow) => {
+    const isAsc = orderBy === property && order === "asc";
+    setOrder(isAsc ? "desc" : "asc");
+    setOrderBy(property);
+  };
+
+  // Applique le tri corrigé
+  const sortedItems = [...items].sort((a, b) => {
+    let aValue: any = a[orderBy];
+    let bValue: any = b[orderBy];
+
+    // Si tri sur les dates
+    if (orderBy === "createdAt" || orderBy === "assignedAt") {
+      const aTime = aValue ? new Date(aValue).getTime() : 0;
+      const bTime = bValue ? new Date(bValue).getTime() : 0;
+      return order === "asc" ? aTime - bTime : bTime - aTime;
     }
+
+    // Si tri sur assignedTo (objet)
+    if (orderBy === "assignedTo") {
+      aValue = aValue ? `${aValue.firstName} ${aValue.lastName}` : "";
+      bValue = bValue ? `${bValue.firstName} ${bValue.lastName}` : "";
+    }
+
+    // Comparaison naturelle pour strings
+    return order === "asc"
+      ? String(aValue).localeCompare(String(bValue), undefined, {
+          numeric: true,
+          sensitivity: "base",
+        })
+      : String(bValue).localeCompare(String(aValue), undefined, {
+          numeric: true,
+          sensitivity: "base",
+        });
+  });
+
+  if (loading) {
+    return (
+      <Box>
+        <Typography variant="h4" mb={3}>
+          CMDB - Ordinateurs
+        </Typography>
+        <CircularProgress />
+      </Box>
+    );
   }
 
-  function goNext() {
-    const maxPages = Math.ceil(total / pageSize);
-    if (page < maxPages) {
-      setPage(page + 1);
-    }
-  }
-
-  function openNew() {
-    router.push("/cmdb/new-asset");
+  if (accessDenied) {
+    return (
+      <Box>
+        <Typography variant="h6" mb={3}>
+          Accès refusé
+        </Typography>
+      </Box>
+    );
   }
 
   return (
     <Box>
       <Typography variant="h4" mb={3}>
-        CMDB — Ordinateurs
+        CMDB - Ordinateurs
       </Typography>
 
-      <Grid container spacing={2} alignItems="center" sx={{ mb: 2 }}>
-        <Grid size={{ xs: 12, md: 8 }}>
-          <TextField
-            fullWidth
-            label="Recherche (nom ou numéro de série)"
-            value={searchText}
-            onChange={(e) => setSearchText(e.target.value)}
-          />
-        </Grid>
-        <Grid size={{ xs: 12, md: 4 }}>
-          <Box sx={{ display: "flex", justifyContent: "flex-end" }}>
-            <Button variant="contained" color="primary" onClick={openNew}>
+      <Paper sx={{ width: "100%", mb: 2 }}>
+        <Toolbar sx={{ display: "flex", justifyContent: "space-between" }}>
+          <Typography variant="h6">Liste des ordinateurs</Typography>
+          <Box sx={{ display: "flex", gap: 2 }}>
+            <TextField
+              size="small"
+              variant="outlined"
+              placeholder="Rechercher..."
+              value={searchText}
+              onChange={(e) => setSearchText(e.target.value)}
+              InputProps={{
+                startAdornment: (
+                  <InputAdornment position="start">
+                    <SearchIcon />
+                  </InputAdornment>
+                ),
+              }}
+            />
+            <Button
+              variant="contained"
+              color="primary"
+              onClick={() => (window.location.href = "/cmdb/new-asset")}
+            >
               Nouveau
             </Button>
           </Box>
-        </Grid>
-      </Grid>
+        </Toolbar>
 
-      {errorMessage ? (
-        <Typography sx={{ mb: 2 }}>{errorMessage}</Typography>
-      ) : null}
-
-      <Paper sx={{ width: "100%" }}>
-        {loading ? (
-          <Box sx={{ p: 2 }}>
-            <CircularProgress />
-          </Box>
-        ) : (
+        <TableContainer>
           <Table>
             <TableHead>
-              <TableRow>
-                <TableCell>Nom</TableCell>
-                <TableCell>Numéro de série</TableCell>
-                <TableCell>Attribué à</TableCell>
-                <TableCell>Attribué le</TableCell>
-                <TableCell>Créé le</TableCell>
+              <TableRow sx={{ backgroundColor: "#f5f5f5" }}>
+                {[
+                  { id: "computerName", label: "Nom" },
+                  { id: "serialNumber", label: "Numéro de série" },
+                  { id: "assignedTo", label: "Attribué à" },
+                  { id: "assignedAt", label: "Attribué le" },
+                  { id: "createdAt", label: "Créé le" },
+                ].map((col) => (
+                  <TableCell key={col.id}>
+                    <TableSortLabel
+                      active={orderBy === col.id}
+                      direction={orderBy === col.id ? order : "asc"}
+                      onClick={() => handleSort(col.id as keyof ComputerRow)}
+                    >
+                      {col.label}
+                    </TableSortLabel>
+                  </TableCell>
+                ))}
               </TableRow>
             </TableHead>
             <TableBody>
-              {items.length === 0 ? (
+              {sortedItems.length === 0 ? (
                 <TableRow>
                   <TableCell colSpan={5}>Aucun ordinateur.</TableCell>
                 </TableRow>
               ) : (
-                items.map((c) => {
-                  let assignedToLabel = "-";
-                  if (c.assignedTo) {
-                    assignedToLabel =
-                      c.assignedTo.firstName + " " + c.assignedTo.lastName;
-                  }
+                sortedItems.map((c) => {
+                  const assignedToLabel = c.assignedTo
+                    ? `${c.assignedTo.firstName} ${c.assignedTo.lastName}`
+                    : "-";
                   const assignedAtText = c.assignedAt
                     ? new Date(c.assignedAt).toLocaleString()
                     : "-";
@@ -197,7 +224,8 @@ export default function CmdbPage() {
                       key={c.id}
                       hover
                       onClick={() =>
-                        router.push("/cmdb/asset?id=" + String(c.id))
+                        (window.location.href =
+                          "/cmdb/asset?id=" + String(c.id))
                       }
                       style={{ cursor: "pointer" }}
                     >
@@ -212,27 +240,21 @@ export default function CmdbPage() {
               )}
             </TableBody>
           </Table>
-        )}
-      </Paper>
+        </TableContainer>
 
-      <Box sx={{ display: "flex", alignItems: "center", gap: 1, mt: 2 }}>
-        <Button variant="outlined" onClick={goPrev} disabled={page <= 1}>
-          Précédent
-        </Button>
-        <Typography>
-          Page {page} / {Math.max(1, Math.ceil(total / pageSize))}
-        </Typography>
-        <Button
-          variant="outlined"
-          onClick={goNext}
-          disabled={page >= Math.ceil(total / pageSize)}
-        >
-          Suivant
-        </Button>
-        <Typography sx={{ ml: 2 }}>
-          {total} élément{total > 1 ? "s" : ""}
-        </Typography>
-      </Box>
+        <TablePagination
+          component="div"
+          count={items.length}
+          page={page}
+          onPageChange={(_, newPage) => setPage(newPage)}
+          rowsPerPage={rowsPerPage}
+          rowsPerPageOptions={[10]}
+          labelRowsPerPage="Lignes par page"
+          labelDisplayedRows={({ from, to, count }) =>
+            `${from}–${to} sur ${count !== -1 ? count : `plus de ${to}`}`
+          }
+        />
+      </Paper>
     </Box>
   );
 }

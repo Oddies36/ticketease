@@ -17,26 +17,33 @@ import {
   ListItem,
 } from "@mui/material";
 
+// Type pour un statut
 type StatusItem = { id: number; label: string };
+
+// Type pour un utilisateur assignable
 type UserItem = { id: number; firstName: string; lastName: string };
 
 export default function TaskPage() {
   const search = useSearchParams();
   const router = useRouter();
-  const taskIdParam = search.get("id") || "";
+  const taskIdParam = search.get("id") || ""; // ID de la tâche reçu dans l'URL
 
+  // états de chargement et d'erreurs
   const [loading, setLoading] = useState<boolean>(true);
   const [saving, setSaving] = useState<boolean>(false);
   const [errorMessage, setErrorMessage] = useState<string>("");
 
+  // données principales
   const [task, setTask] = useState<any>(null);
   const [statuses, setStatuses] = useState<StatusItem[]>([]);
   const [users, setUsers] = useState<UserItem[]>([]);
 
+  // champs éditables
   const [statusId, setStatusId] = useState<number | "">("");
   const [assignedToId, setAssignedToId] = useState<number | "">("");
   const [newComment, setNewComment] = useState<string>("");
 
+  // Chargement de la tâche + statuts
   useEffect(() => {
     async function loadAll() {
       setLoading(true);
@@ -74,7 +81,7 @@ export default function TaskPage() {
       }
 
       try {
-        // on réutilise l’API incidents/statuses pour récupérer les statuts
+        // on réutilise l'API incidents/statuses pour récupérer les statuts
         const res = await fetch("/api/incidents/statuses");
         const data = await res.json();
         const list: StatusItem[] = [];
@@ -95,6 +102,7 @@ export default function TaskPage() {
     loadAll();
   }, [taskIdParam]);
 
+  // Chargement des utilisateurs assignables
   useEffect(() => {
     async function loadUsers() {
       if (!task || typeof task.assignmentGroupId !== "number") {
@@ -126,6 +134,7 @@ export default function TaskPage() {
     loadUsers();
   }, [task]);
 
+  // Récupère l'ID du statut "Clôturé"
   function getClosedStatusId(): number | null {
     let closedId: number | null = null;
     for (let i = 0; i < statuses.length; i++) {
@@ -144,12 +153,14 @@ export default function TaskPage() {
     return closedId;
   }
 
+  // Sauvegarde
   async function saveTask() {
     if (!task) {
       return;
     }
 
     const closedId = getClosedStatusId();
+    // si statut = "clôturé", on appelle directement closeTask()
     if (
       typeof statusId === "number" &&
       closedId !== null &&
@@ -199,6 +210,7 @@ export default function TaskPage() {
     setSaving(false);
   }
 
+  // Clôture
   async function closeTask() {
     if (!task) {
       return;
@@ -246,6 +258,7 @@ export default function TaskPage() {
     setSaving(false);
   }
 
+  // Ajout de commentaire
   async function addComment() {
     if (!task) return;
     if (!newComment) {
@@ -269,6 +282,7 @@ export default function TaskPage() {
         alert(msg);
       } else {
         setNewComment("");
+        // recharge les commentaires
         const reload = await fetch("/api/tasks/get?id=" + String(task.id));
         const fresh = await reload.json();
         setTask(fresh.task);
@@ -317,6 +331,18 @@ export default function TaskPage() {
                 label="Titre"
                 value={task.title || ""}
                 margin="dense"
+                disabled
+              />
+              <TextField
+                fullWidth
+                label="Créé par"
+                value={
+                  task.createdBy
+                    ? `${task.createdBy.firstName} ${task.createdBy.lastName}`
+                    : ""
+                }
+                margin="dense"
+                multiline
                 disabled
               />
               <TextField

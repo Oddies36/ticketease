@@ -3,15 +3,15 @@ import { prisma } from "@/lib/prisma";
 import { getAuthenticatedUser } from "@/lib/auth";
 
 /**
- *   Renvoyer les tâches en attente d’approbation pour l’utilisateur connecté.
+ *   Renvoyer les tâches en attente d'approbation pour l'utilisateur connecté.
  *
  * Paramètres url:
  *   - Aucun
  *
  * Retour:
  *   - 200: { tasks: Array<{ id, number, title, creationDate, createdBy: { firstName, lastName } }> }
- *   - 401: { error } si l’utilisateur n’est pas authentifié
- *   - 500: { error } en cas d’erreur serveur
+ *   - 401: { error } si l'utilisateur n'est pas authentifié
+ *   - 500: { error } en cas d'erreur serveur
  */
 export async function GET() {
   // Vérifie l'utilisateur connecté
@@ -21,7 +21,7 @@ export async function GET() {
   }
 
   try {
-    // Récupère les tâches non approuvées dont l'approverId est l'utilisateur courant
+    // Récupère les tâches non approuvées dont l'approverId est l'utilisateur courant.
     const tasks = await prisma.ticket.findMany({
       where: {
         type: "task",

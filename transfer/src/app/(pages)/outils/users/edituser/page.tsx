@@ -21,6 +21,7 @@ import {
   Divider,
 } from "@mui/material";
 
+// Représentation d'un utilisateur complet
 type UserItem = {
   id: number;
   firstName: string;
@@ -31,6 +32,7 @@ type UserItem = {
   managerId: number | null;
 };
 
+// Représentation simplifiée (pour liste des managers)
 type UserOption = {
   id: number;
   firstName: string;
@@ -42,34 +44,44 @@ export default function EditUserPage() {
   const search = useSearchParams();
   const locationName = search.get("location") || "";
 
+  // États de chargement et erreur
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [errorMessage, setErrorMessage] = useState<string>("");
 
+  // Liste des utilisateurs
   const [users, setUsers] = useState<UserItem[]>([]);
   const [filteredUsers, setFilteredUsers] = useState<UserItem[]>([]);
   const [searchText, setSearchText] = useState<string>("");
 
+  // Sélection de l'utilisateur
   const [selectedUserId, setSelectedUserId] = useState<number | "">("");
   const [selectedUser, setSelectedUser] = useState<UserItem | null>(null);
 
+  // Champs éditables
   const [isAdmin, setIsAdmin] = useState<boolean>(false);
   const [mustChangePassword, setMustChangePassword] = useState<boolean>(false);
   const [managerId, setManagerId] = useState<number | "">("");
 
+  // Liste de managers possibles
   const [managerOptions, setManagerOptions] = useState<UserOption[]>([]);
 
+  // Chargement des utilisateurs
   useEffect(() => {
     async function loadUsers() {
       setIsLoading(true);
       setErrorMessage("");
 
       try {
-        const url = "/api/users/users-by-location?location=" + encodeURIComponent(locationName);
+        const url =
+          "/api/users/users-by-location?location=" +
+          encodeURIComponent(locationName);
         const res = await fetch(url);
 
         if (!res.ok) {
           const err = await res.json().catch(() => ({}));
-          setErrorMessage(err.error || "Erreur lors du chargement des utilisateurs.");
+          setErrorMessage(
+            err.error || "Erreur lors du chargement des utilisateurs."
+          );
           setUsers([]);
           setFilteredUsers([]);
         } else {
@@ -81,7 +93,11 @@ export default function EditUserPage() {
           const opts: UserOption[] = [];
           for (let i = 0; i < loaded.length; i++) {
             const u = loaded[i];
-            const opt: UserOption = { id: u.id, firstName: u.firstName, lastName: u.lastName };
+            const opt: UserOption = {
+              id: u.id,
+              firstName: u.firstName,
+              lastName: u.lastName,
+            };
             opts.push(opt);
           }
           setManagerOptions(opts);
@@ -98,6 +114,7 @@ export default function EditUserPage() {
     loadUsers();
   }, [locationName]);
 
+  // Filtrage des utilisateurs
   useEffect(() => {
     const text = searchText.trim().toLowerCase();
     if (!text) {
@@ -115,6 +132,7 @@ export default function EditUserPage() {
       }
       setFilteredUsers(list);
 
+      // Réinitialise la sélection si l'utilisateur filtré disparaît
       if (selectedUserId !== "") {
         let stillExists = false;
         for (let i = 0; i < list.length; i++) {
@@ -134,6 +152,7 @@ export default function EditUserPage() {
     }
   }, [searchText, users]);
 
+  // Mise à jour du formulaire quand sélection
   useEffect(() => {
     if (selectedUserId === "") {
       setSelectedUser(null);
@@ -169,6 +188,7 @@ export default function EditUserPage() {
     }
   }, [selectedUserId, users]);
 
+  // Enregistrement
   async function handleSave() {
     if (selectedUserId === "") {
       alert("Veuillez sélectionner un utilisateur.");
@@ -214,6 +234,7 @@ export default function EditUserPage() {
         updated.push(u);
       }
     }
+    // Met à jour la liste locale après modification
     setUsers(updated);
 
     router.push("/outils");
@@ -227,7 +248,9 @@ export default function EditUserPage() {
         return <Typography>{errorMessage}</Typography>;
       } else {
         if (users.length === 0) {
-          return <Typography>Aucun utilisateur dans cette localisation.</Typography>;
+          return (
+            <Typography>Aucun utilisateur dans cette localisation.</Typography>
+          );
         } else {
           return (
             <Grid container spacing={3}>
@@ -247,10 +270,22 @@ export default function EditUserPage() {
                       sx={{ mb: 2 }}
                     />
 
-                    <Box sx={{ border: "1px solid #ddd", borderRadius: 1, maxHeight: 360, overflow: "auto" }}>
+                    <Box
+                      sx={{
+                        border: "1px solid #ddd",
+                        borderRadius: 1,
+                        maxHeight: 360,
+                        overflow: "auto",
+                      }}
+                    >
                       <List dense>
                         {filteredUsers.map((u, idx) => {
-                          const label = u.lastName + " " + u.firstName + " — " + u.emailProfessional;
+                          const label =
+                            u.lastName +
+                            " " +
+                            u.firstName +
+                            " - " +
+                            u.emailProfessional;
                           const isSelected = selectedUserId === u.id;
 
                           return (
@@ -261,7 +296,9 @@ export default function EditUserPage() {
                               >
                                 <ListItemText primary={label} />
                               </ListItemButton>
-                              {idx < filteredUsers.length - 1 ? <Divider component="li" /> : null}
+                              {idx < filteredUsers.length - 1 ? (
+                                <Divider component="li" />
+                              ) : null}
                             </React.Fragment>
                           );
                         })}
@@ -310,7 +347,9 @@ export default function EditUserPage() {
                         control={
                           <Checkbox
                             checked={mustChangePassword}
-                            onChange={(e) => setMustChangePassword(e.target.checked)}
+                            onChange={(e) =>
+                              setMustChangePassword(e.target.checked)
+                            }
                           />
                         }
                         label="Doit changer le mot de passe"
@@ -333,7 +372,7 @@ export default function EditUserPage() {
                         }}
                         displayEmpty
                       >
-                        <MenuItem value="">— Aucun —</MenuItem>
+                        <MenuItem value="">- Aucun -</MenuItem>
                         {managerOptions.map((m) => {
                           const label = m.firstName + " " + m.lastName;
                           return (
@@ -348,7 +387,10 @@ export default function EditUserPage() {
                         <Button variant="contained" onClick={handleSave}>
                           Enregistrer
                         </Button>
-                        <Button variant="outlined" onClick={() => router.back()}>
+                        <Button
+                          variant="outlined"
+                          onClick={() => router.back()}
+                        >
                           Retour
                         </Button>
                       </Box>
@@ -366,7 +408,7 @@ export default function EditUserPage() {
   return (
     <Box>
       <Typography variant="h4" mb={3}>
-        Modifier un utilisateur — {locationName}
+        Modifier un utilisateur - {locationName}
       </Typography>
       {renderContent()}
     </Box>

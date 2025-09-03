@@ -15,6 +15,7 @@ import {
   CircularProgress,
 } from "@mui/material";
 
+// Représentation minimale d'un groupe
 type GroupItem = {
   id: number;
   groupName: string;
@@ -23,6 +24,7 @@ type GroupItem = {
   ownerId: number;
 };
 
+// Utilisateur simplifié
 type UserItem = {
   id: number;
   firstName: string;
@@ -34,23 +36,23 @@ export default function EditGroupPage() {
   const searchParams = useSearchParams();
   const locationName = searchParams.get("location") || "";
 
-  // Loading and error states
+  // Etats de chargement et erreurs
   const [isLoadingGroups, setIsLoadingGroups] = useState<boolean>(true);
   const [isLoadingOwners, setIsLoadingOwners] = useState<boolean>(false);
   const [isSaving, setIsSaving] = useState<boolean>(false);
   const [errorMessage, setErrorMessage] = useState<string>("");
 
-  // Data
+  // Données pour groupes et propriétaires
   const [groups, setGroups] = useState<GroupItem[]>([]);
   const [ownerOptions, setOwnerOptions] = useState<UserItem[]>([]);
 
-  // Selection and editable fields
+  // Séléctions de l'utilisateur
   const [selectedGroupId, setSelectedGroupId] = useState<number | "">("");
   const [selectedGroup, setSelectedGroup] = useState<GroupItem | null>(null);
   const [description, setDescription] = useState<string>("");
   const [ownerId, setOwnerId] = useState<number | "">("");
 
-  // Load groups for this location. only groups where user is admin
+  // Charge les groupes de la localisation courante (où l'utilisateur est admin)
   useEffect(() => {
     async function loadGroups() {
       setIsLoadingGroups(true);
@@ -64,7 +66,9 @@ export default function EditGroupPage() {
         const response = await fetch(url);
         if (!response.ok) {
           const err = await response.json().catch(() => ({}));
-          setErrorMessage(err.error || "Erreur lors du chargement des groupes.");
+          setErrorMessage(
+            err.error || "Erreur lors du chargement des groupes."
+          );
           setGroups([]);
         } else {
           const data = await response.json();
@@ -82,7 +86,7 @@ export default function EditGroupPage() {
     loadGroups();
   }, [locationName]);
 
-  // Load owners list
+  // Charge la liste des utilisateurs (pour sélectionner un propriétaire)
   useEffect(() => {
     async function loadOwners() {
       setIsLoadingOwners(true);
@@ -113,7 +117,7 @@ export default function EditGroupPage() {
     loadOwners();
   }, []);
 
-  // When the selected group changes, fill the editable fields
+  // Quand on change de groupe sélectionné -> remplir les champs éditables
   useEffect(() => {
     if (selectedGroupId === "") {
       setSelectedGroup(null);
@@ -146,6 +150,7 @@ export default function EditGroupPage() {
     }
   }, [selectedGroupId, groups]);
 
+  // Sauvegarde les modifications
   async function handleSave() {
     if (selectedGroupId === "") {
       alert("Veuillez sélectionner un groupe.");
@@ -178,7 +183,7 @@ export default function EditGroupPage() {
         setErrorMessage(message);
         alert(message);
       } else {
-        // Update local state so the UI reflects the changes
+        // Met à jour la liste en local
         const updatedGroups: GroupItem[] = [];
         for (let i = 0; i < groups.length; i++) {
           const g = groups[i];
@@ -204,6 +209,7 @@ export default function EditGroupPage() {
     setIsSaving(false);
   }
 
+  // Contenu dans une fonction qu'on appelle dans le render
   function renderContent() {
     if (isLoadingGroups) {
       return <CircularProgress />;
@@ -242,7 +248,7 @@ export default function EditGroupPage() {
                       displayEmpty
                     >
                       <MenuItem value="" disabled>
-                        — Sélectionner —
+                        - Sélectionner -
                       </MenuItem>
                       {groups.map((g) => {
                         return (
@@ -264,7 +270,7 @@ export default function EditGroupPage() {
                         Détails du groupe
                       </Typography>
 
-                      {/* Non-editable fields */}
+                      {/* Champs non-editables */}
                       <TextField
                         label="Nom du groupe"
                         value={selectedGroup.groupName}
@@ -282,7 +288,7 @@ export default function EditGroupPage() {
                         disabled
                       />
 
-                      {/* Editable fields */}
+                      {/* Champs editables */}
                       <TextField
                         label="Description"
                         value={description}
@@ -358,7 +364,7 @@ export default function EditGroupPage() {
   return (
     <Box>
       <Typography variant="h4" mb={3}>
-        Modifier un groupe — {locationName}
+        Modifier un groupe - {locationName}
       </Typography>
       {renderContent()}
     </Box>

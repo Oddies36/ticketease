@@ -15,8 +15,8 @@ import { useRouter } from "next/navigation";
 /**
  * Composant: Incidents
  * Description:
- *   Page d’accueil des incidents. Affiche un bouton de création
- *   et la liste des localisations accessibles à l’utilisateur pour la gestion des incidents.
+ *   Page d'accueil des incidents. Affiche un bouton de création
+ *   et la liste des localisations accessibles à l'utilisateur pour la gestion des incidents.
  *
  * Sources de données:
  *   - Localisations incidents : /api/groupes/available-locations?prefix=Support.Incidents.
@@ -32,7 +32,7 @@ const Incidents: React.FC = () => {
 
   /**
    * Effet:
-   *   Charge la liste des localisations d’incidents au montage du composant.
+   *   Charge la liste des localisations d'incidents au montage du composant.
    */
   useEffect(() => {
     async function getLocations() {
@@ -53,8 +53,6 @@ const Incidents: React.FC = () => {
     getLocations();
   }, []);
 
-  /* ================================ RENDER ================================ */
-
   return (
     <Box>
       {/* Titre */}
@@ -64,7 +62,7 @@ const Incidents: React.FC = () => {
 
       {/* Bandeau: action principale + aide contextuelle */}
       <Grid container spacing={5} alignItems="flex-start">
-        {/* Colonne action: création d’un incident */}
+        {/* Colonne action: création d'un incident */}
         <Grid size={{ xs: 12, md: 6 }}>
           <Box>
             <Button

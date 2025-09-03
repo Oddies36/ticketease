@@ -12,12 +12,7 @@ import {
   Grid,
   TextField,
   Divider,
-  MenuItem,
-  Select,
   FormControl,
-  InputLabel,
-  InputAdornment,
-  IconButton,
   RadioGroup,
   FormControlLabel,
   Radio,
@@ -27,9 +22,9 @@ import {
 import { useForm, Controller } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
-import SearchIcon from "@mui/icons-material/Search";
 import { useSearchParams } from "next/navigation";
 
+// Validation avec Zod : impose les champs et formats
 const groupSchema = z.object({
   groupName: z.enum([
     "Gestion.Utilisateurs.",
@@ -48,16 +43,19 @@ const NewGroup: React.FC = () => {
   const router = useRouter();
   const [locations, setLocations] = useState<{ id: number; name: string }>();
 
+  // Liste d'utilisateurs proposée pour le champ "owner"
   type UserOption = {
     id: string;
     firstName: string;
     lastName: string;
   };
   const [userOptions, setUserOptions] = useState<UserOption[]>([]);
+
   const [loading, setLoading] = useState(false);
   const [apiError, setApiError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
+  // React Hook Form + validation Zod
   const {
     control,
     handleSubmit,
@@ -66,6 +64,7 @@ const NewGroup: React.FC = () => {
     resolver: zodResolver(groupSchema),
   });
 
+  // Charge les infos de localisation au montage
   useEffect(() => {
     const fetchLocations = async () => {
       try {
@@ -79,6 +78,7 @@ const NewGroup: React.FC = () => {
     fetchLocations();
   }, []);
 
+  // Recherche utilisateurs par saisie dans l'auto-complétion
   const fetchUsers = async (query: string) => {
     if (!query) return;
     setLoading(true);
@@ -94,6 +94,7 @@ const NewGroup: React.FC = () => {
     }
   };
 
+  // Soumission formulaire
   const onSubmit = async (data: any) => {
     setIsSubmitting(true);
     setApiError(null);
@@ -103,8 +104,6 @@ const NewGroup: React.FC = () => {
       let groupLocation = locations?.name;
 
       let newGroupName = groupType + groupLocation;
-
-      
 
       const submissionData = {
         groupName: newGroupName,
@@ -119,10 +118,7 @@ const NewGroup: React.FC = () => {
         body: JSON.stringify(submissionData),
       });
 
-      console.log("API Response status:", response.status);
-
       const result = await response.json();
-      console.log("API Response data:", result);
 
       if (result.success) {
         router.push("/outils");
@@ -137,6 +133,7 @@ const NewGroup: React.FC = () => {
     }
   };
 
+  // Bouton annuler
   const handleCancel = () => {
     router.push("/outils");
   };

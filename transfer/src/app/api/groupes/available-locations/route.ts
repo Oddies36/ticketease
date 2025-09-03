@@ -4,7 +4,7 @@ import { NextRequest, NextResponse } from "next/server";
 
 /**
  * Rôle :
- *   Retourne une liste avec des noms de localisations auxquelles l’utilisateur connecté
+ *   Retourne une liste avec des noms de localisations auxquelles l'utilisateur connecté
  *   a accès via ses groupes dont le nom commence par un prefix.
  *
  * Paramètres url :
@@ -18,8 +18,7 @@ import { NextRequest, NextResponse } from "next/server";
  *   - 401 : { error: "Non authentifié" }
  */
 export async function GET(req: NextRequest) {
-
-  // Authentification — on refuse si l’utilisateur n’est pas connecté
+  // Authentification - on refuse si l'utilisateur n'est pas connecté
   const user = await getAuthenticatedUser();
   if (!user) {
     return NextResponse.json({ error: "Non authentifié" }, { status: 401 });
@@ -29,7 +28,7 @@ export async function GET(req: NextRequest) {
   const searchParams = req.nextUrl.searchParams;
   const prefix = searchParams.get("prefix") ?? "";
 
-  /** 
+  /**
    * Récupération des appartenances aux groupes correspondant au préfixe,
    * en ne gardant que les groupes rattachés à une localisation.
    */
@@ -51,17 +50,16 @@ export async function GET(req: NextRequest) {
     },
   });
 
+  // Construit l'array
+  const locations: string[] = [];
 
-// Construit l'array
-const locations: string[] = [];
-
-for (const membership of groups) {
-  const name = membership.group?.location?.name;
-  if (name && !locations.includes(name)) {
-    locations.push(name);
+  for (const membership of groups) {
+    const name = membership.group?.location?.name;
+    if (name && !locations.includes(name)) {
+      locations.push(name);
+    }
   }
-}
 
-  // Réponse JSON : liste des localisations accessibles
+  // Réponse JSON : liste des localisations accessibles.
   return NextResponse.json({ locations });
 }

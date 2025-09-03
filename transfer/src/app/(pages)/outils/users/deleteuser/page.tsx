@@ -21,6 +21,7 @@ import {
   Divider,
 } from "@mui/material";
 
+// Structure d'un utilisateur minimal pour la suppression
 type UserItem = {
   id: number;
   firstName: string;
@@ -35,31 +36,40 @@ export default function DeleteUserPage() {
   const search = useSearchParams();
   const locationName = search.get("location") || "";
 
+  // États globaux
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [errorMessage, setErrorMessage] = useState<string>("");
 
+  // Liste et recherche d'utilisateurs
   const [users, setUsers] = useState<UserItem[]>([]);
   const [filteredUsers, setFilteredUsers] = useState<UserItem[]>([]);
   const [searchText, setSearchText] = useState<string>("");
 
+  // Sélection de l'utilisateur à supprimer
   const [selectedUserId, setSelectedUserId] = useState<number | "">("");
   const [selectedUser, setSelectedUser] = useState<UserItem | null>(null);
 
+  // États pour la suppression
   const [confirmOpen, setConfirmOpen] = useState<boolean>(false);
   const [isDeleting, setIsDeleting] = useState<boolean>(false);
 
+  // Charge les utilisateurs de la localisation
   useEffect(() => {
     async function loadUsers() {
       setIsLoading(true);
       setErrorMessage("");
 
       try {
-        const url = "/api/users/users-by-location?location=" + encodeURIComponent(locationName);
+        const url =
+          "/api/users/users-by-location?location=" +
+          encodeURIComponent(locationName);
         const res = await fetch(url);
 
         if (!res.ok) {
           const err = await res.json().catch(() => ({}));
-          setErrorMessage(err.error || "Erreur lors du chargement des utilisateurs.");
+          setErrorMessage(
+            err.error || "Erreur lors du chargement des utilisateurs."
+          );
           setUsers([]);
           setFilteredUsers([]);
         } else {
@@ -80,6 +90,7 @@ export default function DeleteUserPage() {
     loadUsers();
   }, [locationName]);
 
+  // Filtrage par recherche
   useEffect(() => {
     const text = searchText.trim().toLowerCase();
     if (!text) {
@@ -97,6 +108,7 @@ export default function DeleteUserPage() {
       }
       setFilteredUsers(list);
 
+      // Réinitialiser la sélection si l'utilisateur filtré disparaît
       if (selectedUserId !== "") {
         let stillExists = false;
         for (let i = 0; i < list.length; i++) {
@@ -113,6 +125,7 @@ export default function DeleteUserPage() {
     }
   }, [searchText, users]);
 
+  // Mise à jour sélection
   useEffect(() => {
     if (selectedUserId === "") {
       setSelectedUser(null);
@@ -135,6 +148,7 @@ export default function DeleteUserPage() {
     }
   }, [selectedUserId, users]);
 
+  // Suppression
   async function handleDeleteConfirmed() {
     if (selectedUserId === "") {
       alert("Veuillez sélectionner un utilisateur.");
@@ -153,6 +167,7 @@ export default function DeleteUserPage() {
       if (!result.success) {
         alert(result.message || "Erreur lors de la suppression.");
       } else {
+        // Retirer l'utilisateur supprimé de la liste locale
         const remaining: UserItem[] = [];
         for (let i = 0; i < users.length; i++) {
           const u = users[i];
@@ -183,7 +198,9 @@ export default function DeleteUserPage() {
         return <Typography>{errorMessage}</Typography>;
       } else {
         if (users.length === 0) {
-          return <Typography>Aucun utilisateur dans cette localisation.</Typography>;
+          return (
+            <Typography>Aucun utilisateur dans cette localisation.</Typography>
+          );
         } else {
           return (
             <Grid container spacing={3}>
@@ -203,10 +220,22 @@ export default function DeleteUserPage() {
                       sx={{ mb: 2 }}
                     />
 
-                    <Box sx={{ border: "1px solid #ddd", borderRadius: 1, maxHeight: 360, overflow: "auto" }}>
+                    <Box
+                      sx={{
+                        border: "1px solid #ddd",
+                        borderRadius: 1,
+                        maxHeight: 360,
+                        overflow: "auto",
+                      }}
+                    >
                       <List dense>
                         {filteredUsers.map((u, idx) => {
-                          const label = u.lastName + " " + u.firstName + " — " + u.emailProfessional;
+                          const label =
+                            u.lastName +
+                            " " +
+                            u.firstName +
+                            " - " +
+                            u.emailProfessional;
                           const isSelected = selectedUserId === u.id;
 
                           return (
@@ -217,7 +246,9 @@ export default function DeleteUserPage() {
                               >
                                 <ListItemText primary={label} />
                               </ListItemButton>
-                              {idx < filteredUsers.length - 1 ? <Divider component="li" /> : null}
+                              {idx < filteredUsers.length - 1 ? (
+                                <Divider component="li" />
+                              ) : null}
                             </React.Fragment>
                           );
                         })}
@@ -283,7 +314,7 @@ export default function DeleteUserPage() {
   return (
     <Box>
       <Typography variant="h4" mb={3}>
-        Supprimer un utilisateur — {locationName}
+        Supprimer un utilisateur - {locationName}
       </Typography>
 
       {renderContent()}
@@ -291,7 +322,9 @@ export default function DeleteUserPage() {
       <Dialog open={confirmOpen} onClose={() => setConfirmOpen(false)}>
         <DialogTitle>Confirmer la suppression</DialogTitle>
         <DialogContent>
-          <Typography>Êtes-vous sûr de vouloir supprimer cet utilisateur ?</Typography>
+          <Typography>
+            Êtes-vous sûr de vouloir supprimer cet utilisateur ?
+          </Typography>
         </DialogContent>
         <DialogActions>
           <Button onClick={() => setConfirmOpen(false)} disabled={isDeleting}>

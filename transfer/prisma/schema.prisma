@@ -1,9 +1,11 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
-// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
-// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
-
+// ============================================================================
+// @id              clé primaire
+// @autoincrement   incrémente automatiquement l'ID
+// @default         valeur par défaut
+// @unique          valeur unique dans la table
+// @relation        relation entre deux modèles
+// @updatedAt       met automatiquement la date quand la ligne est modifiée
+// ============================================================================
 generator client {
   provider = "prisma-client-js"
 }
@@ -13,6 +15,7 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+// Représente un utilisateur de l'application
 model User {
   id                 Int       @id @default(autoincrement())
   firstName          String
@@ -41,6 +44,7 @@ model User {
   computers Computer[]
 }
 
+// Représente un groupe de support
 model Group {
   id          Int         @id @default(autoincrement())
   groupName   String
@@ -57,6 +61,7 @@ model Group {
   assignedTickets Ticket[]
 }
 
+// Table de liaison entre les utilisateurs et les groupes
 model GroupUser {
   id      Int     @id @default(autoincrement())
   userId  Int
@@ -66,9 +71,10 @@ model GroupUser {
   user  User  @relation(fields: [userId], references: [id], onDelete: Cascade)
   group Group @relation(fields: [groupId], references: [id])
 
-  @@unique([userId, groupId])
+  @@unique([userId, groupId]) // contrainte sur la table entière
 }
 
+// Represente une localisation
 model Location {
   id      Int      @id @default(autoincrement())
   name    String   @unique
@@ -77,11 +83,13 @@ model Location {
   tickets Ticket[]
 }
 
+// Définit un type de ticket
 enum TicketType {
   incident
   task
 }
 
+// Represente un statut de ticket
 model Status {
   id    Int    @id @default(autoincrement())
   label String @unique
@@ -89,6 +97,7 @@ model Status {
   tickets Ticket[]
 }
 
+// Représente la priorité d'un ticket
 model Priority {
   id    Int    @id @default(autoincrement())
   label String @unique
@@ -97,6 +106,7 @@ model Priority {
   slas    SLA[]
 }
 
+// Représente la categorie d'un ticket
 model Category {
   id    Int    @id @default(autoincrement())
   label String @unique
@@ -105,6 +115,7 @@ model Category {
   tickets Ticket[]
 }
 
+// Définit un SLA
 model SLA {
   id             Int @id @default(autoincrement())
   priorityId     Int
@@ -115,6 +126,7 @@ model SLA {
   tickets  Ticket[]
 }
 
+// Représente un ticket
 model Ticket {
   id          Int        @id @default(autoincrement())
   number      String     @unique
@@ -130,7 +142,7 @@ model Ticket {
   isApproved Boolean
   approverId Int?
 
-  createdById       Int
+  createdById       Int?
   assignedToId      Int?
   assignmentGroupId Int?
   locationId        Int
@@ -152,28 +164,30 @@ model Ticket {
   sla      SLA?     @relation(fields: [slaId], references: [id])
   location Location @relation(fields: [locationId], references: [id])
 
-  createdBy       User   @relation("TicketCreatedBy", fields: [createdById], references: [id])
-  approver        User?  @relation("TicketApprovedBy", fields: [approverId], references: [id])
-  assignedTo      User?  @relation("TicketAssignedTo", fields: [assignedToId], references: [id])
-  updatedBy       User?  @relation("TicketUpdatedBy", fields: [updatedById], references: [id])
-  closedBy        User?  @relation("TicketClosedBy", fields: [closedById], references: [id])
+  createdBy       User?  @relation("TicketCreatedBy", fields: [createdById], references: [id], onDelete: SetNull)
+  approver        User?  @relation("TicketApprovedBy", fields: [approverId], references: [id], onDelete: SetNull)
+  assignedTo      User?  @relation("TicketAssignedTo", fields: [assignedToId], references: [id], onDelete: SetNull)
+  updatedBy       User?  @relation("TicketUpdatedBy", fields: [updatedById], references: [id], onDelete: SetNull)
+  closedBy        User?  @relation("TicketClosedBy", fields: [closedById], references: [id], onDelete: SetNull)
   assignmentGroup Group? @relation(fields: [assignmentGroupId], references: [id])
 
   comments Comment[]
 }
 
+// Représente un commentaire dans un ticket
 model Comment {
   id        Int      @id @default(autoincrement())
   content   String
   createdAt DateTime @default(now())
 
   ticketId    Int
-  createdById Int
+  createdById Int?
 
   ticket    Ticket @relation(fields: [ticketId], references: [id])
-  createdBy User   @relation(fields: [createdById], references: [id])
+  createdBy User?  @relation(fields: [createdById], references: [id], onDelete: SetNull)
 }
 
+// Représente un ordinateur
 model Computer {
   id           Int    @id @default(autoincrement())
   computerName String

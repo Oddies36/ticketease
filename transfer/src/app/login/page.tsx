@@ -7,29 +7,31 @@ import {
   Button,
   TextField,
   Typography,
-  Link,
   Grid,
   Container,
-  useTheme,
   Paper,
-  Tooltip,
   CircularProgress,
 } from "@mui/material";
 import { useUserStore } from "@/app/store/userStore";
 import { useRouter } from "next/navigation";
+import ArrowBackIcon from "@mui/icons-material/ArrowBack";
 
 const LoginPage = () => {
-  const theme = useTheme();
+  // L'affichage qui montre ou bien le login, ou bien le mot de passe
   const [step, setStep] = useState(0);
   const [mail, setMail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
+
   const router = useRouter();
-  const user = useUserStore((state) => state.user);
   const setUser = useUserStore((state) => state.setUser);
   const clearUser = useUserStore((state) => state.clearUser);
   const [loading, setLoading] = useState(true);
 
+  /**
+   * Vérifie si une session utilisateur est déjà active
+   * Si oui, redirige vers le dashboard, sinon affiche le formulaire
+   */
   useEffect(() => {
     const checkSession = async () => {
       try {
@@ -50,39 +52,64 @@ const LoginPage = () => {
     checkSession();
   }, []);
 
-  const handleNext = () => setStep(1);
+  // Passe au step 1 qui affiche le mot de passe
+  const handleNext = () => {
+    setStep(1);
+    setError("");
+  };
+
+  // Retourne au step 0 ce qui montre le login
   const handleBack = () => {
     setStep(0);
     setPassword("");
     setError("");
   };
+
+  // Gère la modification du champ mail
   const handleMailChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setMail(e.target.value.toLowerCase());
   };
+
+  // Gère la modification du champ password
   const handlePasswordChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setPassword(e.target.value);
   };
 
+  /**
+   * Soumet le formulaire de connexion
+   * l'api login signe un jwt et ajoute ça dans un cookie dans la réponse
+   * En cas d'échec, revient au step 1 et affiche une erreur
+   */
   const handleLogin = async () => {
     try {
       const response = await fetch("/api/auth/login", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
+        // Stringify converti un objet javascript en string JSON
         body: JSON.stringify({ email: mail, password }),
       });
-      if (!response.ok) throw new Error("Email ou mot de passe incorrecte");
 
-      const loginData = await response.json();
-      if (loginData.mustChangePassword) {
-        router.push("/change-password");
+      if (!response.ok) {
+        setPassword("");
+        setMail("");
+        setStep(0);
+        setError("Email ou mot de passe incorrecte");
         return;
       }
+
+      // Ici on vérifie le token. Si c'est ok, on retourne le user
       const meResponse = await fetch("/api/auth/me", {
         method: "GET",
         credentials: "include",
       });
-      if (!meResponse.ok) throw new Error("Impossible de récupérer les informations utilisateur");
+      if (!meResponse.ok) {
+        throw new Error("Impossible de récupérer les informations utilisateur");
+      }
 
+      /**
+       * Pour finir on vérifie si mustChangePassword est true.
+       * Si oui, redirige vers change-password, si non vers dashboard
+       */
       const meUser = await meResponse.json();
       setUser(meUser);
       if (meUser.mustChangePassword) router.push("/change-password");
@@ -94,7 +121,14 @@ const LoginPage = () => {
 
   if (loading) {
     return (
-      <Box sx={{ height: "100vh", display: "flex", alignItems: "center", justifyContent: "center" }}>
+      <Box
+        sx={{
+          height: "100vh",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+        }}
+      >
         <CircularProgress />
       </Box>
     );
@@ -148,23 +182,28 @@ const LoginPage = () => {
                   >
                     <TextField
                       fullWidth
-                      label="E-mail"
+                      label="Adresse mail"
                       margin="normal"
                       variant="outlined"
                       value={mail}
                       onChange={handleMailChange}
-                      autoComplete="username"
+                      autoComplete="email"
                       inputMode="email"
                     />
-                    <Tooltip title="Contactez votre administrateur">
-                      <Link href="#" variant="body2">
-                        Pas de compte?
-                      </Link>
-                    </Tooltip>
-                    <Button fullWidth type="submit" variant="contained" sx={{ mt: 2, bgcolor: "#6366F1" }}>
+                    <Button
+                      fullWidth
+                      type="submit"
+                      variant="contained"
+                      sx={{ mt: 2, bgcolor: "#6366F1" }}
+                    >
                       Suivant
                     </Button>
                   </form>
+                  {error && (
+                    <Typography color="error" sx={{ mt: 2 }}>
+                      {error}
+                    </Typography>
+                  )}
                 </Box>
               ) : (
                 <Box>
@@ -184,23 +223,29 @@ const LoginPage = () => {
                       onChange={handlePasswordChange}
                       autoComplete="current-password"
                     />
-                    <Link href="#" variant="body2">
-                      Mot de passe oublié?
-                    </Link>
-                    <Button fullWidth variant="contained" onClick={handleLogin} sx={{ mt: 2, bgcolor: "#6366F1" }}>
+                    <Button
+                      fullWidth
+                      variant="contained"
+                      onClick={handleLogin}
+                      sx={{ mt: 2, bgcolor: "#6366F1" }}
+                    >
                       Connexion
                     </Button>
                   </form>
-                  <Box sx={{ position: "absolute", top: 0, left: 0, m: 1 }}>
-                    <Button variant="text" onClick={handleBack}>
-                      Retour
-                    </Button>
-                  </Box>
-                  {error && (
-                    <Typography color="error" sx={{ mt: 2 }}>
-                      {error}
-                    </Typography>
-                  )}
+                  <Button
+                    startIcon={<ArrowBackIcon />}
+                    onClick={handleBack}
+                    sx={{
+                      position: "absolute",
+                      top: 5,
+                      left: 5,
+                      color: "#6366F1",
+                      textTransform: "none",
+                      fontWeight: "bold",
+                    }}
+                  >
+                    Retour
+                  </Button>
                 </Box>
               )}
             </Box>
@@ -215,19 +260,13 @@ const LoginPage = () => {
           alignItems: "center",
           color: "white",
           textAlign: "center",
-          backgroundColor: theme.palette.primary.dark,
-          minHeight: "100vh",
-          overflow: "hidden",
+          backgroundImage: "url('/ticketeaseteams.png')",
+          backgroundSize: "cover",
+          backgroundPosition: "center",
+          backgroundRepeat: "no-repeat",
+          height: "100vh",
         }}
-      >
-        <Box sx={{ width: "100%", height: "100%" }}>
-          <img
-            src="/ticketeaseteams.png"
-            alt="TicketEase Team"
-            style={{ width: "100%", height: "100%", objectFit: "cover" }}
-          />
-        </Box>
-      </Grid>
+      />
     </Grid>
   );
 };

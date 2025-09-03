@@ -70,6 +70,7 @@ export async function GET(req: NextRequest) {
         assignmentGroup: { select: { groupName: true } },
         assignedTo: { select: { id: true, firstName: true, lastName: true } },
         sla: { select: { responseTime: true, resolutionTime: true } },
+        isBreached: true,
       },
     });
 

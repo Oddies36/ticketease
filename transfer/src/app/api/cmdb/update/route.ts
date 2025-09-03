@@ -1,14 +1,20 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 
+/**
+ * PATCH /api/cmdb/computers/update
+ * Met à jour un ordinateur
+ */
 export async function PATCH(req: Request) {
   try {
     const body = await req.json();
 
+    // Champs reçus
     const idRaw = body.id;
     const computerNameRaw = body.computerName;
     const assignedToIdRaw = body.assignedToId;
 
+    // Vérifie l'id
     if (idRaw === undefined || idRaw === null) {
       return NextResponse.json({ error: "id manquant" }, { status: 400 });
     }
@@ -17,6 +23,7 @@ export async function PATCH(req: Request) {
       return NextResponse.json({ error: "id invalide" }, { status: 400 });
     }
 
+    // Vérifie le nom d'ordinateur
     const computerName =
       typeof computerNameRaw === "string" ? computerNameRaw.trim() : "";
     if (!computerName) {
@@ -26,30 +33,41 @@ export async function PATCH(req: Request) {
       );
     }
 
+    // Vérifie l'utilisateur assigné
     let assignedToId: number | null = null;
-    if (assignedToIdRaw !== null && assignedToIdRaw !== "" && assignedToIdRaw !== undefined) {
+    if (
+      assignedToIdRaw !== null &&
+      assignedToIdRaw !== "" &&
+      assignedToIdRaw !== undefined
+    ) {
       const v = Number(assignedToIdRaw);
       if (isNaN(v)) {
-        return NextResponse.json({ error: "assignedToId invalide" }, { status: 400 });
+        return NextResponse.json(
+          { error: "assignedToId invalide" },
+          { status: 400 }
+        );
       }
       const user = await prisma.user.findUnique({
         where: { id: v },
         select: { id: true },
       });
       if (!user) {
-        return NextResponse.json({ error: "Utilisateur introuvable" }, { status: 400 });
+        return NextResponse.json(
+          { error: "Utilisateur introuvable" },
+          { status: 400 }
+        );
       }
       assignedToId = v;
     } else {
       assignedToId = null;
     }
 
+    // Mise à jour dans la DB
     const updated = await prisma.computer.update({
       where: { id: id },
       data: {
         computerName: computerName,
         assignedToId: assignedToId,
-        // Si tu veux aussi gérer assignedAt ici :
         assignedAt: assignedToId ? new Date() : null,
       },
       include: {
@@ -59,7 +77,6 @@ export async function PATCH(req: Request) {
 
     return NextResponse.json({ computer: updated });
   } catch (e) {
-    console.error("Erreur PATCH /api/cmdb/update:", e);
     return NextResponse.json({ error: "Erreur serveur" }, { status: 500 });
   }
 }

@@ -18,6 +18,10 @@ import {
 } from "@mui/material";
 import SearchIcon from "@mui/icons-material/Search";
 
+/**
+ * Type représentant un utilisateur pour l'annuaire.
+ * Correspond à ce que renvoie l'API /api/users/get-users.
+ */
 interface UserData {
   id: number;
   firstName: string;
@@ -31,6 +35,7 @@ const Annuaire: React.FC = () => {
   const [orderBy, setOrderBy] = useState<keyof UserData>("lastName");
   const [order, setOrder] = useState<"asc" | "desc">("asc");
 
+  // Récupération des utilisateurs au montage
   useEffect(() => {
     const fetchUsers = async () => {
       const res = await fetch("/api/users/get-users");
@@ -40,12 +45,14 @@ const Annuaire: React.FC = () => {
     fetchUsers();
   }, []);
 
+  // Gestion du tri par colonne
   const handleSort = (property: keyof UserData) => {
     const isAsc = orderBy === property && order === "asc";
     setOrder(isAsc ? "desc" : "asc");
     setOrderBy(property);
   };
 
+  // Filtrage selon la recherche
   const filteredUsers = users.filter((user) => {
     const search = searchTerm.toLowerCase();
     return (
@@ -55,6 +62,7 @@ const Annuaire: React.FC = () => {
     );
   });
 
+  // Tri des résultats filtrés
   const sortedUsers = [...filteredUsers].sort((a, b) => {
     if (a[orderBy] < b[orderBy]) return order === "asc" ? -1 : 1;
     if (a[orderBy] > b[orderBy]) return order === "asc" ? 1 : -1;
@@ -94,16 +102,16 @@ const Annuaire: React.FC = () => {
                     <TableSortLabel
                       active={
                         orderBy ===
-                        (["lastName", "firstName", "emailProfessional"][index] as keyof UserData)
+                        (["lastName", "firstName", "emailProfessional"][
+                          index
+                        ] as keyof UserData)
                       }
                       direction={order}
                       onClick={() =>
                         handleSort(
-                          [
-                            "lastName",
-                            "firstName",
-                            "emailProfessional",
-                          ][index] as keyof UserData
+                          ["lastName", "firstName", "emailProfessional"][
+                            index
+                          ] as keyof UserData
                         )
                       }
                     >

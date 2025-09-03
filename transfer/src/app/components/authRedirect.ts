@@ -14,11 +14,14 @@ export const authRedirect = () => {
   useEffect(() => {
     const checkAuth = async () => {
       try {
+        //On appelle l'API me et on demande d'inclure le cookie
         const res = await fetch("/api/auth/me", { credentials: "include" });
         if (res.ok) {
+          //On sauvegarde le user en mémoire
           const userData = await res.json();
           setUser(userData);
         } else {
+          //Sinon on nettoie et on redirige vers /login
           clearUser();
           router.replace("/login");
         }

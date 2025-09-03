@@ -1,16 +1,21 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 
+/**
+ * POST /api/groupes/add-member
+ * Ajoute un utilisateur à un groupe (ou met à jour son rôle admin si déjà membre).
+ */
 export async function POST(req: Request) {
   const body = await req.json();
   const { groupId, userId, isAdmin } = body;
 
+  // Vérifie les champs requis
   if (!groupId || !userId) {
     return NextResponse.json({ error: "Missing data" }, { status: 400 });
   }
 
   try {
-    // Check if user already in group
+    // Vérifie si l'utilisateur est déjà membre du groupe
     const existing = await prisma.groupUser.findUnique({
       where: {
         userId_groupId: {
@@ -21,7 +26,7 @@ export async function POST(req: Request) {
     });
 
     if (existing) {
-      // Already in group → update admin status
+      // Déjà membre → met juste à jour son statut admin
       const updated = await prisma.groupUser.update({
         where: {
           userId_groupId: {
@@ -44,7 +49,7 @@ export async function POST(req: Request) {
         isAdmin: updated.isAdmin,
       });
     } else {
-      // New membership
+      // crée une ligne dans groupUser
       const created = await prisma.groupUser.create({
         data: {
           userId,
@@ -64,7 +69,6 @@ export async function POST(req: Request) {
       });
     }
   } catch (error) {
-    console.error("Erreur lors de l'ajout :", error);
     return NextResponse.json({ error: "Erreur serveur" }, { status: 500 });
   }
 }

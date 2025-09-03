@@ -15,20 +15,24 @@ import {
   CircularProgress,
 } from "@mui/material";
 
+// Utilisateur renvoyé par l'api
 type UserItem = { id: number; firstName: string; lastName: string };
 
 export default function NewAssetPage() {
   const router = useRouter();
 
+  // Champs du formulaire
   const [computerName, setComputerName] = useState<string>("");
   const [serialNumber, setSerialNumber] = useState<string>("");
   const [users, setUsers] = useState<UserItem[]>([]);
   const [assignedToId, setAssignedToId] = useState<number | "">("");
 
+  // Chargement, sauvegarde et erreur
   const [loadingUsers, setLoadingUsers] = useState<boolean>(true);
   const [saving, setSaving] = useState<boolean>(false);
   const [errorMessage, setErrorMessage] = useState<string>("");
 
+  // Charge les utilisateurs
   useEffect(() => {
     async function loadUsers() {
       setLoadingUsers(true);
@@ -51,7 +55,6 @@ export default function NewAssetPage() {
               });
             }
           } else if (Array.isArray(data.users)) {
-            // in case your endpoint returns { users: [...] }
             for (let i = 0; i < data.users.length; i++) {
               const u = data.users[i];
               list.push({
@@ -66,13 +69,12 @@ export default function NewAssetPage() {
       } catch (e) {
         setUsers([]);
       }
-
       setLoadingUsers(false);
     }
-
     loadUsers();
   }, []);
 
+  // Envoie la création
   async function handleCreate() {
     if (!computerName) {
       alert("Le nom de l'ordinateur est requis.");

@@ -4,16 +4,17 @@ import { getAuthenticatedUser } from "@/lib/auth";
 
 /**
  * GET /api/tasks/mytask
- * Tâches créées par l'utilisateur authentifié.
- * Réponse: { tickets: Array<...> }
+ * Récupère toutes les tâches créées par l'utilisateur authentifié.
  */
 export async function GET() {
+  // Vérifie l'utilisateur connecté
   const user = await getAuthenticatedUser();
   if (!user) {
     return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
   }
 
   try {
+    // Récupère les tâches de type "task" créées par l'utilisateur
     const tickets = await prisma.ticket.findMany({
       where: { type: "task", createdById: user.id },
       orderBy: { creationDate: "desc" },

@@ -9,12 +9,15 @@ import {
   Grid,
   List,
   ListItem,
-  ListItemButton,
-  ListItemText,
   Paper,
 } from "@mui/material";
 import { useRouter } from "next/navigation";
 
+/**
+ * Type : PendingItem
+ * Description :
+ *   Représente une demande en attente d'approbation.
+ */
 type PendingItem = {
   id: number;
   number: string;
@@ -23,12 +26,35 @@ type PendingItem = {
   createdBy?: { firstName: string; lastName: string } | null;
 };
 
-const TaskPage: React.FC = () => {
+/**
+ * Composant: Tasks
+ * Description:
+ *   Page d'accueil des demandes (tasks). Affiche un bouton de création,
+ *   une aide contextuelle, la liste des localisations accessibles à
+ *   l'utilisateur et les demandes en attente d'approbation.
+ *
+ * Sources de données:
+ *   - Localisations tasks : /api/groupes/available-locations?prefix=Support.Tasks.
+ *   - Demandes en attente : /api/tasks/pendingapprovals
+ */
+const Tasks: React.FC = () => {
+  /* ============================== ETATS ============================== */
+
+  // Liste des noms de localisations accessibles pour les tâches
   const [locations, setLocations] = useState<string[]>([]);
+
+  // Liste des demandes en attente d'approbation
   const [pending, setPending] = useState<PendingItem[]>([]);
+
   const [loadingPending, setLoadingPending] = useState<boolean>(false);
   const router = useRouter();
 
+  /* ============================ USE EFFECTS =========================== */
+
+  /**
+   * Effet:
+   *   Charge la liste des localisations disponibles pour les tâches.
+   */
   useEffect(() => {
     async function fetchLocations() {
       try {
@@ -41,13 +67,17 @@ const TaskPage: React.FC = () => {
         } else {
           setLocations([]);
         }
-      } catch (e) {
+      } catch {
         setLocations([]);
       }
     }
     fetchLocations();
   }, []);
 
+  /**
+   * Effet:
+   *   Charge les demandes en attente d'approbation.
+   */
   useEffect(() => {
     async function fetchPending() {
       setLoadingPending(true);
@@ -57,22 +87,13 @@ const TaskPage: React.FC = () => {
           setPending([]);
         } else {
           const data = await res.json();
-          const list: PendingItem[] = [];
           if (data && Array.isArray(data.tasks)) {
-            for (let i = 0; i < data.tasks.length; i++) {
-              const t = data.tasks[i];
-              list.push({
-                id: t.id,
-                number: t.number,
-                title: t.title,
-                creationDate: t.creationDate,
-                createdBy: t.createdBy || null,
-              });
-            }
+            setPending(data.tasks);
+          } else {
+            setPending([]);
           }
-          setPending(list);
         }
-      } catch (e) {
+      } catch {
         setPending([]);
       }
       setLoadingPending(false);
@@ -80,27 +101,23 @@ const TaskPage: React.FC = () => {
     fetchPending();
   }, []);
 
+  /* ============================ HANDLERS ============================ */
+
   async function handleApprove(ticketId: number) {
     try {
       const res = await fetch("/api/tasks/approve", {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ ticketId: ticketId, approve: true }),
+        body: JSON.stringify({ ticketId, approve: true }),
       });
       const data = await res.json();
       if (!res.ok || !data.success) {
         alert(data.error || "Erreur lors de l'approbation.");
         return;
       }
-      const next: PendingItem[] = [];
-      for (let i = 0; i < pending.length; i++) {
-        if (pending[i].id !== ticketId) {
-          next.push(pending[i]);
-        }
-      }
-      setPending(next);
+      setPending((prev) => prev.filter((p) => p.id !== ticketId));
       alert("Demande approuvée.");
-    } catch (e) {
+    } catch {
       alert("Erreur réseau.");
     }
   }
@@ -110,33 +127,32 @@ const TaskPage: React.FC = () => {
       const res = await fetch("/api/tasks/approve", {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ ticketId: ticketId, approve: false }),
+        body: JSON.stringify({ ticketId, approve: false }),
       });
       const data = await res.json();
       if (!res.ok || !data.success) {
         alert(data.error || "Erreur lors du refus.");
         return;
       }
-      const next: PendingItem[] = [];
-      for (let i = 0; i < pending.length; i++) {
-        if (pending[i].id !== ticketId) {
-          next.push(pending[i]);
-        }
-      }
-      setPending(next);
+      setPending((prev) => prev.filter((p) => p.id !== ticketId));
       alert("Demande refusée.");
-    } catch (e) {
+    } catch {
       alert("Erreur réseau.");
     }
   }
 
+  /* ================================ RENDER ================================ */
+
   return (
     <Box>
+      {/* Titre */}
       <Typography variant="h4" mb={3}>
-        Tasks
+        Demandes
       </Typography>
 
+      {/* Bandeau: action principale + aide contextuelle */}
       <Grid container spacing={5} alignItems="flex-start">
+        {/* Colonne action: création d'une demande */}
         <Grid size={{ xs: 12, md: 6 }}>
           <Box>
             <Button
@@ -149,8 +165,10 @@ const TaskPage: React.FC = () => {
           </Box>
         </Grid>
 
+        {/* Séparateur vertical */}
         <Divider orientation="vertical" flexItem sx={{ mx: 2 }} />
 
+        {/* Colonne aide */}
         <Grid size={{ xs: 12, md: 4 }}>
           <Box>
             <Typography variant="h6" gutterBottom>
@@ -158,36 +176,68 @@ const TaskPage: React.FC = () => {
             </Typography>
             <Typography variant="body2">
               Créez une demande pour une action planifiée (logiciel, accès,
-              matériel, etc.). Les créations d’utilisateurs et de groupes
+              matériel, etc.). Les créations d'utilisateurs et de groupes
               passent aussi par une demande.
             </Typography>
           </Box>
         </Grid>
       </Grid>
 
+      {/* Liste des localisations */}
       {locations.length > 0 ? (
         <Box mt={5}>
           <Typography variant="h6" gutterBottom>
-            Vos localisations :
+            Vos localisations de support :
           </Typography>
           <List>
             {locations.map((loc) => (
-              <ListItem key={loc} disablePadding>
-                <ListItemButton
-                  onClick={() =>
-                    router.push(
-                      "/tasks/task-list?localisation=" + encodeURIComponent(loc)
-                    )
-                  }
+              <ListItem key={loc} disablePadding sx={{ mb: 1 }}>
+                <Box
+                  sx={{
+                    display: "flex",
+                    gap: 1,
+                    alignItems: "center",
+                    width: "100%",
+                  }}
                 >
-                  <ListItemText primary={loc} />
-                </ListItemButton>
+                  {/* Nom de la localisation */}
+                  <Typography sx={{ flex: 1 }}>{loc}</Typography>
+
+                  {/* Voir toutes les demandes */}
+                  <Button
+                    variant="outlined"
+                    onClick={() =>
+                      router.push(
+                        "/tasks/task-list?localisation=" +
+                          encodeURIComponent(loc)
+                      )
+                    }
+                  >
+                    Voir
+                  </Button>
+
+                  {/* Voir uniquement les demandes en retard */}
+                  <Button
+                    variant="outlined"
+                    color="error"
+                    onClick={() =>
+                      router.push(
+                        "/tasks/task-list?localisation=" +
+                          encodeURIComponent(loc) +
+                          "&breached=1"
+                      )
+                    }
+                  >
+                    En retard
+                  </Button>
+                </Box>
               </ListItem>
             ))}
           </List>
         </Box>
       ) : null}
 
+      {/* Section demandes à valider */}
       <Box mt={5}>
         <Typography variant="h6" gutterBottom>
           Demandes à valider (manager)
@@ -201,10 +251,9 @@ const TaskPage: React.FC = () => {
           ) : (
             <List>
               {pending.map((t) => {
-                let who = "-";
-                if (t.createdBy) {
-                  who = t.createdBy.firstName + " " + t.createdBy.lastName;
-                }
+                const who = t.createdBy
+                  ? t.createdBy.firstName + " " + t.createdBy.lastName
+                  : "-";
                 return (
                   <ListItem
                     key={t.id}
@@ -228,15 +277,10 @@ const TaskPage: React.FC = () => {
                       </Box>
                     }
                   >
-                    <ListItemText
-                      primary={t.number + " — " + t.title}
-                      secondary={
-                        "Créé par " +
-                        who +
-                        " — " +
-                        new Date(t.creationDate).toLocaleString()
-                      }
-                    />
+                    <Typography>
+                      {t.number} - {t.title} (créé par {who} -{" "}
+                      {new Date(t.creationDate).toLocaleString()})
+                    </Typography>
                   </ListItem>
                 );
               })}
@@ -248,4 +292,4 @@ const TaskPage: React.FC = () => {
   );
 };
 
-export default TaskPage;
+export default Tasks;

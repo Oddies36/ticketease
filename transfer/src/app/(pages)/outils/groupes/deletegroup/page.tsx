@@ -19,6 +19,7 @@ import {
   DialogActions,
 } from "@mui/material";
 
+// Représente un groupe tel que renvoyé par l'API
 type GroupItem = {
   id: number;
   groupName: string;
@@ -42,6 +43,7 @@ export default function DeleteGroupPage() {
   const [isDeleting, setIsDeleting] = useState<boolean>(false);
   const [confirmOpen, setConfirmOpen] = useState<boolean>(false);
 
+  // Charge les groupes administrés pour cette localisation
   useEffect(() => {
     async function loadGroups() {
       setIsLoadingGroups(true);
@@ -55,7 +57,9 @@ export default function DeleteGroupPage() {
         const response = await fetch(url);
         if (!response.ok) {
           const err = await response.json().catch(() => ({}));
-          setErrorMessage(err.error || "Erreur lors du chargement des groupes.");
+          setErrorMessage(
+            err.error || "Erreur lors du chargement des groupes."
+          );
           setGroups([]);
         } else {
           const data = await response.json();
@@ -73,6 +77,7 @@ export default function DeleteGroupPage() {
     loadGroups();
   }, [locationName]);
 
+  // Met à jour les infos du groupe sélectionné quand l'id change
   useEffect(() => {
     if (selectedGroupId === "") {
       setSelectedGroup(null);
@@ -95,6 +100,7 @@ export default function DeleteGroupPage() {
     }
   }, [selectedGroupId, groups]);
 
+  // Suppression confirmée
   async function handleDeleteConfirmed() {
     if (selectedGroupId === "") {
       alert("Veuillez sélectionner un groupe.");
@@ -124,6 +130,7 @@ export default function DeleteGroupPage() {
             remaining.push(g);
           }
         }
+        // Met à jour la liste en retirant le groupe supprimé
         setGroups(remaining);
         setSelectedGroupId("");
         setSelectedGroup(null);
@@ -177,7 +184,7 @@ export default function DeleteGroupPage() {
                       displayEmpty
                     >
                       <MenuItem value="" disabled>
-                        — Sélectionner —
+                        - Sélectionner -
                       </MenuItem>
                       {groups.map((g) => {
                         return (
@@ -259,7 +266,7 @@ export default function DeleteGroupPage() {
   return (
     <Box>
       <Typography variant="h4" mb={3}>
-        Supprimer un groupe — {locationName}
+        Supprimer un groupe - {locationName}
       </Typography>
 
       {renderContent()}

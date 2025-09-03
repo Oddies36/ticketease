@@ -19,11 +19,20 @@ import {
 
 const Outils: React.FC = () => {
   const router = useRouter();
+  // Type de modal ouverte : gestion utilisateur ou gestion groupe
   const [modalType, setModalType] = useState<"user" | "group" | null>(null);
+  // Liste des localisations disponibles
   const [locations, setLocations] = useState<string[] | null>(null);
-  const [groupIntent, setGroupIntent] = useState<"create" | "edit" | "delete" | null>(null);
-  const [userIntent, setUserIntent] = useState<"create" | "edit" | "delete" | null>(null);
+  // Intention pour la gestion des groupes (créer, modifier, supprimer)
+  const [groupIntent, setGroupIntent] = useState<
+    "create" | "edit" | "delete" | null
+  >(null);
+  // Intention pour la gestion des utilisateurs (créer, modifier, supprimer)
+  const [userIntent, setUserIntent] = useState<
+    "create" | "edit" | "delete" | null
+  >(null);
 
+  // Charge les localisations dès qu'on ouvre une modal
   useEffect(() => {
     if (!modalType) {
       return;
@@ -50,6 +59,7 @@ const Outils: React.FC = () => {
     fetchLocations();
   }, [modalType, groupIntent, userIntent]);
 
+  // Ferme la modal et réinitialise l'état
   function handleClose() {
     setModalType(null);
     setGroupIntent(null);
@@ -153,17 +163,17 @@ const Outils: React.FC = () => {
             ? userIntent === "create"
               ? "Créer un utilisateur"
               : userIntent === "edit"
-              ? "Modifier un utilisateur"
-              : userIntent === "delete"
-              ? "Supprimer un utilisateur"
-              : "Utilisateurs"
+                ? "Modifier un utilisateur"
+                : userIntent === "delete"
+                  ? "Supprimer un utilisateur"
+                  : "Utilisateurs"
             : groupIntent === "create"
-            ? "Créer un groupe"
-            : groupIntent === "edit"
-            ? "Modifier un groupe"
-            : groupIntent === "delete"
-            ? "Supprimer un groupe"
-            : "Groupes"}
+              ? "Créer un groupe"
+              : groupIntent === "edit"
+                ? "Modifier un groupe"
+                : groupIntent === "delete"
+                  ? "Supprimer un groupe"
+                  : "Groupes"}
         </DialogTitle>
         <DialogContent>
           {locations === null ? (

@@ -20,18 +20,18 @@ import {
 /**
  * Type: CategoryItem
  * Description:
- *   Elément de catégorie renvoyé par l’API des catégories d’incidents.
+ *   Elément de catégorie renvoyé par l'API des catégories d'incidents.
  */
 type CategoryItem = { id: number; label: string };
 
 /**
  * Composant: NewIncidentPage
  * Description:
- *   Formulaire de création d’un incident
+ *   Formulaire de création d'un incident
  *
  * Sources de données:
- *   - Catégories d’incident : GET  /api/incidents/categories
- *   - Création d’incident   : POST /api/incidents/create
+ *   - Catégories d'incident : GET  /api/incidents/categories
+ *   - Création d'incident   : POST /api/incidents/create
  */
 export default function NewIncidentPage() {
   const router = useRouter();
@@ -42,7 +42,7 @@ export default function NewIncidentPage() {
   const [title, setTitle] = useState<string>("");
   const [impact, setImpact] = useState<string>("");
   const [description, setDescription] = useState<string>("");
-  const [categorie, setCategorie] = useState<string>(""); // string label attendu par l’API
+  const [categorie, setCategorie] = useState<string>(""); // string label attendu par l'API
 
   // Données de référence
   const [categories, setCategories] = useState<CategoryItem[]>([]);
@@ -61,10 +61,10 @@ export default function NewIncidentPage() {
 
   /**
    * Effet:
-   *   Charge la liste des catégories d’incident au montage.
+   *   Charge la liste des catégories d'incident au montage.
    * Détail:
    *   - Appelle /api/incidents/categories
-   *   - Alimente "categories" (liste vide en cas d’erreur)
+   *   - Alimente "categories" (liste vide en cas d'erreur)
    */
   useEffect(() => {
     async function loadCategories() {
@@ -103,13 +103,16 @@ export default function NewIncidentPage() {
    * Description:
    *   Vérifie que tous les champs requis sont renseignés.
    * Retourne:
-   *   - boolean — true si le formulaire est valide
+   *   - boolean - true si le formulaire est valide
    */
   function validate() {
     let ok = true;
 
     if (!title) {
       setTitleError("Le titre est requis");
+      ok = false;
+    } else if (title.trim().length < 5) {
+      setTitleError("Minimum 5 caractères");
       ok = false;
     } else {
       setTitleError("");
@@ -124,6 +127,9 @@ export default function NewIncidentPage() {
 
     if (!description) {
       setDescriptionError("La description est requise");
+      ok = false;
+    } else if (description.trim().length < 5) {
+      setDescriptionError("Minimum 5 caractères");
       ok = false;
     } else {
       setDescriptionError("");
@@ -142,7 +148,7 @@ export default function NewIncidentPage() {
   /**
    * Fonction: handleCreate
    * Description:
-   *   Soumet le formulaire au backend pour créer l’incident.
+   *   Soumet le formulaire au backend pour créer l'incident.
    */
   async function handleCreate() {
     const ok = validate();
@@ -155,10 +161,10 @@ export default function NewIncidentPage() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          title: title,
-          impact: impact, // "individuel" | "plusieurs" | "service" | "global"
-          description: description,
-          categorie: categorie, // label de catégorie (recherche côté backend)
+          title: title.trim(),
+          impact: impact,
+          description: description.trim(),
+          categorie: categorie,
         }),
       });
 
@@ -175,7 +181,6 @@ export default function NewIncidentPage() {
         return;
       }
 
-      // Optionnel: lecture silencieuse de la réponse
       await response.json().catch(() => ({}));
       router.push("/incidents");
     } catch {
@@ -184,8 +189,6 @@ export default function NewIncidentPage() {
 
     setIsSubmitting(false);
   }
-
-  /* ================================ RENDER ================================ */
 
   if (isLoading) {
     return (

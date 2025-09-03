@@ -4,16 +4,17 @@ import { getAuthenticatedUser } from "@/lib/auth";
 
 /**
  * GET /api/incidents/myinc
- * Incidents créés par l'utilisateur authentifié.
- * Réponse: { tickets: Array<...> }
+ * Retourne la liste des incidents créés par l'utilisateur connecté.
  */
 export async function GET() {
+  // Vérifie l'utilisateur connecté
   const user = await getAuthenticatedUser();
   if (!user) {
     return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
   }
 
   try {
+    // Recherche des incidents créés par cet utilisateur
     const tickets = await prisma.ticket.findMany({
       where: { type: "incident", createdById: user.id },
       orderBy: { creationDate: "desc" },

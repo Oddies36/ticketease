@@ -23,14 +23,16 @@ const ChangePasswordPage = () => {
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(true);
 
+  // Vérifie la session utilisateur
   useEffect(() => {
     const checkAuth = async () => {
       try {
         const res = await fetch("/api/auth/me", {
           method: "GET",
-          credentials: "include",
+          credentials: "include", // inclut le cookie JWT
         });
 
+        // Si pas connecté, redirection vers login
         if (!res.ok) {
           router.push("/login");
           return;
@@ -38,6 +40,7 @@ const ChangePasswordPage = () => {
 
         const user = await res.json();
 
+        // Si connecté, redirige vers dashboard
         if (!user.mustChangePassword) {
           router.push("/dashboard");
           return;
@@ -52,6 +55,7 @@ const ChangePasswordPage = () => {
     checkAuth();
   }, [router]);
 
+  // Vérifie la validité du mot de passe et appelle l'api de modif
   const handleChangePassword = async () => {
     setError("");
 
@@ -70,7 +74,9 @@ const ChangePasswordPage = () => {
 
       if (!response.ok) {
         const data = await response.json();
-        throw new Error(data.error || "Erreur lors du changement de mot de passe");
+        throw new Error(
+          data.error || "Erreur lors du changement de mot de passe"
+        );
       }
 
       router.push("/dashboard");

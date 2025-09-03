@@ -1,10 +1,26 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 
+/**
+ * POST /api/groupes/new-group
+ * Crée un nouveau groupe si le nom n'est pas déjà utilisé.
+ * - Vérifie l'existence d'un groupe avec le même nom
+ * - Crée le groupe avec les informations fournies
+ * - Ajoute automatiquement le propriétaire comme administrateur du groupe
+ *
+ * Body attendu :
+ * {
+ *   groupName: string,
+ *   location: number (id de la localisation),
+ *   description: string,
+ *   owner: number (id de l'utilisateur propriétaire)
+ * }
+ */
 export async function POST(request: Request) {
   const { groupName, location, description, owner } = await request.json();
 
   try {
+    // Vérifie si un groupe avec le même nom existe déjà
     const existingGroup = await prisma.group.findFirst({
       where: {
         groupName: groupName,
@@ -23,6 +39,7 @@ export async function POST(request: Request) {
       );
     }
 
+    // Création du groupe
     const newGroup = await prisma.group.create({
       data: {
         groupName: groupName,
@@ -34,6 +51,7 @@ export async function POST(request: Request) {
       },
     });
 
+    // Ajoute le propriétaire comme administrateur du groupe
     await prisma.groupUser.create({
       data: {
         userId: owner,

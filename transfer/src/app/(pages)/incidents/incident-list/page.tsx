@@ -11,12 +11,13 @@ import {
   TableRow,
   TableCell,
   TableBody,
+  TableSortLabel,
   CircularProgress,
+  TableContainer,
+  TablePagination,
 } from "@mui/material";
 
-/**
- *  Structure minimale renvoyée par l’endpoint de liste.
- */
+// Ticket renvoyé par l'api incidents
 type TicketRow = {
   id: number;
   number: string;
@@ -29,57 +30,49 @@ type TicketRow = {
   assignmentGroup?: { groupName: string | null } | null;
   assignedTo?: { id: number; firstName: string; lastName: string } | null;
   sla?: { responseTime: number; resolutionTime: number } | null;
+  isBreached: boolean;
 };
 
-/**
- * Composant: IncidentListPage
- * Description:
- *   Liste les incidents pour une localisation donnée
- *   - SLA réponse : temps restant tant que le ticket est "Ouvert", sinon "Répondu"
- *   - SLA résolution : "Clos" si le ticket est fermé, sinon temps restant
- *
- * Sources de données:
- *   - Incidents par localisation : /api/incidents/list-by-location?location=...
- *
- * Paramètres d’URL:
- *   - localisation: string
- */
-export default function IncidentListPage() {
-  /* ============================== ETATS ============================== */
+// Sens du tri
+type Order = "asc" | "desc";
 
+export default function IncidentListPage() {
   const router = useRouter();
   const search = useSearchParams();
   const locationName = search.get("localisation") || "";
+  const breached = search.get("breached") || "";
 
-  const [loading, setLoading] = useState<boolean>(true);
+  const [loading, setLoading] = useState(true);
   const [tickets, setTickets] = useState<TicketRow[]>([]);
-  const [errorMessage, setErrorMessage] = useState<string>("");
+  const [errorMessage, setErrorMessage] = useState("");
 
-  // Sert juste à rafraîchir l’affichage des délais chaque minute
+  const [orderBy, setOrderBy] = useState<keyof TicketRow>("number");
+  const [order, setOrder] = useState<Order>("asc");
+
+  const [page, setPage] = useState(0);
+  const rowsPerPage = 30;
+
+  // rafraîchit le temps restant
   const [now, setNow] = useState(Date.now());
-
   useEffect(() => {
     const id = window.setInterval(() => setNow(Date.now()), 60000);
-    return () => window.clearInterval(id);
+    return () => clearInterval(id);
   }, []);
 
-  /* ============================ USE EFFECTS =========================== */
-
-  /**
-   * Effet:
-   *   Charge la liste des tickets pour la localisation fournie.
-   */
+  // charge les tickets de la localisation
   useEffect(() => {
     async function loadTickets() {
       setLoading(true);
       setErrorMessage("");
 
       try {
-        const res = await fetch(
+        let url =
           "/api/incidents/list-by-location?location=" +
-            encodeURIComponent(locationName)
-        );
+          encodeURIComponent(locationName);
 
+        if (breached) url += "&breached=1";
+
+        const res = await fetch(url);
         if (!res.ok) {
           const err = await res.json().catch(() => ({}));
           const msg =
@@ -92,10 +85,7 @@ export default function IncidentListPage() {
         }
 
         const data = await res.json();
-        const list: TicketRow[] = Array.isArray(data?.tickets)
-          ? (data.tickets as TicketRow[])
-          : [];
-        setTickets(list);
+        setTickets(Array.isArray(data?.tickets) ? data.tickets : []);
       } catch {
         setErrorMessage("Erreur");
         setTickets([]);
@@ -111,66 +101,106 @@ export default function IncidentListPage() {
       setTickets([]);
       setLoading(false);
     }
-  }, [locationName]);
+  }, [locationName, breached]);
 
-  /* ======================== HANDLERS / HELPERS ======================== */
-
-  /**
-   * Fonction: openTicket
-   * Description:
-   *   Navigation vers les détails d’un ticket.
-   */
+  // ouvre un ticket
   function openTicket(id: number) {
     router.push("/incidents/ticket?id=" + String(id));
   }
 
-  /**
-   * Fonction: isOpenStatus
-   * Description:
-   *   Retourne true si le label de statut correspond à "Ouvert".
-   */
-  function isOpenStatus(label?: string | null): boolean {
-    if (!label) return false;
-    return label.toLowerCase() === "ouvert";
-  }
-
-  /**
-   * Fonction: addMinutes
-   * Description:
-   *   Calcule une nouvelle date en ajoutant des minutes à une date de départ.
-   */
-  function addMinutes(date: string, minutes: number): string {
-    const startTime = new Date(date).getTime();
-    const resultTime = startTime + minutes * 60 * 1000;
-    return new Date(resultTime).toISOString();
-  }
-
-  /**
-   * Fonction: formatRemaining
-   * Description:
-   *   Formate le temps restant.
-   *   Utilise l’état now pour se recalculer automatiquement chaque minute.
-   */
-  function formatRemaining(deadline?: string | null): string {
-    if (!deadline) return "-";
-
+  // Affiche temps restant ou En retard
+  function formatRemaining(deadline: string): string {
     const deadlineTime = new Date(deadline).getTime();
-    const nowTime = now;
-
-    let difference = deadlineTime - nowTime;
-    const isLate = difference < 0;
-    if (isLate) difference = -difference;
-
-    const totalMinutes = Math.floor(difference / 60000);
-    const hours = Math.floor(totalMinutes / 60);
-    const minutesLeft = totalMinutes % 60;
-
-    return isLate
-      ? `En retard ${hours}h ${minutesLeft}m`
-      : `${hours}h ${minutesLeft}m`;
+    const diff = deadlineTime - now;
+    if (diff <= 0) return "En retard";
+    const totalMinutes = Math.floor(diff / 60000);
+    const h = Math.floor(totalMinutes / 60);
+    const m = totalMinutes % 60;
+    return `${h}h ${m}m restants`;
   }
 
-  /* ================================ RENDER ================================ */
+  // affichage SLA réponse
+  function formatSlaResponse(ticket: TicketRow): React.ReactNode {
+    if (ticket.responseDate) {
+      const deadline = new Date(ticket.responseDate).getTime();
+      if (now > deadline) {
+        return <span style={{ color: "red" }}>En retard</span>;
+      }
+      return <>{formatRemaining(ticket.responseDate)}</>;
+    }
+    return <>Répondu</>;
+  }
+
+  // affichage SLA résolution
+  function formatSlaResolution(ticket: TicketRow): React.ReactNode {
+    if (ticket.closedDate) {
+      return <>Clos</>;
+    }
+    if (ticket.sla?.resolutionTime) {
+      const deadline =
+        new Date(ticket.creationDate).getTime() +
+        ticket.sla.resolutionTime * 60000;
+      if (now > deadline) {
+        return <span style={{ color: "red" }}>En retard</span>;
+      }
+      return <>{formatRemaining(new Date(deadline).toISOString())}</>;
+    }
+    return <>-</>;
+  }
+
+  // valeur numérique pour tri SLA réponse
+  function getSlaResponseSortValue(ticket: TicketRow): number {
+    if (!ticket.responseDate) return 0; // déjà répondu
+    const deadline = new Date(ticket.responseDate).getTime();
+    return deadline - now; // négatif = en retard, positif = temps restant
+  }
+
+  /**
+   * Convertit un champ de ticket en valeur simple afin de permettre le tri correct dans le tableau
+   */
+  function getSortableValue(ticket: TicketRow, key: keyof TicketRow): any {
+    switch (key) {
+      case "status":
+        return ticket.status?.label || "";
+      case "priority":
+        return ticket.priority?.label || "";
+      case "assignedTo":
+        return ticket.assignedTo
+          ? `${ticket.assignedTo.lastName} ${ticket.assignedTo.firstName}`
+          : "";
+      case "creationDate":
+      case "closedDate":
+        return ticket[key] ? new Date(ticket[key] as string).getTime() : 0;
+      case "responseDate":
+        return getSlaResponseSortValue(ticket);
+      case "number":
+        return ticket.number || "";
+      default:
+        return ticket[key] ?? "";
+    }
+  }
+
+  // tri des colonnes
+  const handleSort = (property: keyof TicketRow) => {
+    const isAsc = orderBy === property && order === "asc";
+    setOrder(isAsc ? "desc" : "asc");
+    setOrderBy(property);
+  };
+
+  // tickets triés
+  const sortedTickets = [...tickets].sort((a, b) => {
+    const aValue = getSortableValue(a, orderBy);
+    const bValue = getSortableValue(b, orderBy);
+    if (aValue < bValue) return order === "asc" ? -1 : 1;
+    if (aValue > bValue) return order === "asc" ? 1 : -1;
+    return 0;
+  });
+
+  // tickets paginés
+  const paginatedTickets = sortedTickets.slice(
+    page * rowsPerPage,
+    page * rowsPerPage + rowsPerPage
+  );
 
   if (loading) {
     return (
@@ -186,35 +216,40 @@ export default function IncidentListPage() {
   return (
     <Box>
       <Typography variant="h4" mb={3}>
-        Incidents - {locationName || "-"}
+        Incidents - {locationName || "-"} {breached ? "en retard" : ""}
       </Typography>
 
-      {errorMessage ? (
-        <Typography sx={{ mb: 2 }}>{errorMessage}</Typography>
-      ) : null}
+      {errorMessage && <Typography sx={{ mb: 2 }}>{errorMessage}</Typography>}
 
       <Paper sx={{ width: "100%" }}>
-        <Table>
-          <TableHead>
-            <TableRow>
-              <TableCell>Numéro</TableCell>
-              <TableCell>Titre</TableCell>
-              <TableCell>Statut</TableCell>
-              <TableCell>Priorité</TableCell>
-              <TableCell>Assigné à</TableCell>
-              <TableCell>SLA réponse</TableCell>
-              <TableCell>SLA résolution</TableCell>
-              <TableCell>Créé le</TableCell>
-            </TableRow>
-          </TableHead>
-          <TableBody>
-            {tickets.map((t) => {
-              const resolutionDeadline =
-                t.sla && typeof t.sla.resolutionTime === "number"
-                  ? addMinutes(t.creationDate, t.sla.resolutionTime)
-                  : null;
-
-              return (
+        <TableContainer>
+          <Table>
+            <TableHead>
+              <TableRow>
+                {[
+                  { id: "number", label: "Numéro" },
+                  { id: "title", label: "Titre" },
+                  { id: "status", label: "Statut" },
+                  { id: "priority", label: "Priorité" },
+                  { id: "assignedTo", label: "Assigné à" },
+                  { id: "responseDate", label: "SLA réponse" },
+                  { id: "closedDate", label: "SLA résolution" },
+                  { id: "creationDate", label: "Créé le" },
+                ].map((col) => (
+                  <TableCell key={col.id}>
+                    <TableSortLabel
+                      active={orderBy === col.id}
+                      direction={orderBy === col.id ? order : "asc"}
+                      onClick={() => handleSort(col.id as keyof TicketRow)}
+                    >
+                      {col.label}
+                    </TableSortLabel>
+                  </TableCell>
+                ))}
+              </TableRow>
+            </TableHead>
+            <TableBody>
+              {paginatedTickets.map((t) => (
                 <TableRow
                   key={t.id}
                   hover
@@ -223,33 +258,36 @@ export default function IncidentListPage() {
                 >
                   <TableCell>{t.number}</TableCell>
                   <TableCell>{t.title}</TableCell>
-                  <TableCell>{t.status ? t.status.label : "-"}</TableCell>
-                  <TableCell>{t.priority ? t.priority.label : "-"}</TableCell>
+                  <TableCell>{t.status?.label || "-"}</TableCell>
+                  <TableCell>{t.priority?.label || "-"}</TableCell>
                   <TableCell>
                     {t.assignedTo
                       ? `${t.assignedTo.firstName} ${t.assignedTo.lastName}`
                       : "-"}
                   </TableCell>
-                  <TableCell>
-                    {t.responseDate && isOpenStatus(t.status?.label)
-                      ? formatRemaining(t.responseDate)
-                      : "Répondu"}
-                  </TableCell>
-                  <TableCell>
-                    {t.closedDate
-                      ? "Clos"
-                      : resolutionDeadline
-                        ? formatRemaining(resolutionDeadline)
-                        : "-"}
-                  </TableCell>
+                  <TableCell>{formatSlaResponse(t)}</TableCell>
+                  <TableCell>{formatSlaResolution(t)}</TableCell>
                   <TableCell>
                     {new Date(t.creationDate).toLocaleString()}
                   </TableCell>
                 </TableRow>
-              );
-            })}
-          </TableBody>
-        </Table>
+              ))}
+            </TableBody>
+          </Table>
+        </TableContainer>
+
+        <TablePagination
+          component="div"
+          count={tickets.length}
+          page={page}
+          onPageChange={(_, newPage) => setPage(newPage)}
+          rowsPerPage={rowsPerPage}
+          rowsPerPageOptions={[30]}
+          labelRowsPerPage="Lignes par page"
+          labelDisplayedRows={({ from, to, count }) =>
+            `${from}–${to} sur ${count !== -1 ? count : `plus de ${to}`}`
+          }
+        />
       </Paper>
     </Box>
   );

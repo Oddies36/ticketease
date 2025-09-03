@@ -1,9 +1,13 @@
-// src/app/api/incidents/statuses/route.ts
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 
+/**
+ * GET /api/incidents/statuses
+ * Retourne la liste des statuts disponibles, triées par id croissant.
+ */
 export async function GET() {
   try {
+    // Récupère tout les statuts, triées par id
     const statuses = await prisma.status.findMany({
       select: { id: true, label: true },
       orderBy: { id: "asc" },

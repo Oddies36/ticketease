@@ -15,6 +15,7 @@ import {
   CircularProgress,
 } from "@mui/material";
 
+// Utilisateur renvoyé par l'API
 type UserItem = { id: number; firstName: string; lastName: string };
 
 export default function AssetPage() {
@@ -22,26 +23,32 @@ export default function AssetPage() {
   const search = useSearchParams();
   const idParam = search.get("id") || "";
 
+  // Etats de chargement / sauvegarde
   const [loading, setLoading] = useState<boolean>(true);
   const [saving, setSaving] = useState<boolean>(false);
   const [errorMessage, setErrorMessage] = useState<string>("");
 
+  // Liste des utilisateurs
   const [users, setUsers] = useState<UserItem[]>([]);
 
+  // Champs du formulaire
   const [computerName, setComputerName] = useState<string>("");
   const [serialNumber, setSerialNumber] = useState<string>("");
   const [assignedToId, setAssignedToId] = useState<number | "">("");
 
+  // Charge les infos de l'ordinateur + les utilisateurs
   useEffect(() => {
     async function loadAll() {
       setLoading(true);
       setErrorMessage("");
 
-      // load computer details
+      // Charge l'ordinateur
       try {
         const url =
           "/api/cmdb/get-computer?id=" + encodeURIComponent(String(idParam));
+        console.log("Fetching computer:", url);
         const res = await fetch(url);
+
         if (!res.ok) {
           const err = await res.json().catch(() => ({}));
           const msg =
@@ -49,62 +56,65 @@ export default function AssetPage() {
           setErrorMessage(msg);
         } else {
           const data = await res.json();
-          const c = data && data.computer ? data.computer : null;
-          if (c) {
-            setComputerName(c.computerName || "");
-            setSerialNumber(c.serialNumber || "");
-            if (c.assignedTo && typeof c.assignedTo.id === "number") {
-              setAssignedToId(c.assignedTo.id);
-            } else if (typeof c.assignedToId === "number") {
-              setAssignedToId(c.assignedToId);
+          console.log("Computer data reçu:", data);
+          const comp = data && data.computer ? data.computer : null;
+          if (comp) {
+            setComputerName(comp.computerName || "");
+            setSerialNumber(comp.serialNumber || "");
+            if (comp.assignedTo && typeof comp.assignedTo.id === "number") {
+              setAssignedToId(comp.assignedTo.id);
+            } else if (typeof comp.assignedToId === "number") {
+              setAssignedToId(comp.assignedToId);
             } else {
               setAssignedToId("");
             }
           }
         }
       } catch (e) {
+        console.error("Erreur réseau (détails):", e);
         setErrorMessage("Erreur réseau (détails).");
       }
 
-      // load users for assignment
+      // Charge les utilisateurs pour l'assignation
       try {
+        console.log("Fetching users…");
         const res = await fetch("/api/users/get-users");
         if (!res.ok) {
           setUsers([]);
         } else {
           const data = await res.json();
+          console.log("Users data reçu:", data);
           const list: UserItem[] = [];
+
           if (Array.isArray(data)) {
-            for (let i = 0; i < data.length; i++) {
-              const u = data[i];
+            data.forEach((u: any) => {
               list.push({
                 id: u.id,
                 firstName: u.firstName,
                 lastName: u.lastName,
               });
-            }
+            });
           } else if (Array.isArray(data.users)) {
-            for (let i = 0; i < data.users.length; i++) {
-              const u = data.users[i];
+            data.users.forEach((u: any) => {
               list.push({
                 id: u.id,
                 firstName: u.firstName,
                 lastName: u.lastName,
               });
-            }
+            });
           }
           setUsers(list);
         }
       } catch (e) {
+        console.error("Erreur réseau (users):", e);
         setUsers([]);
       }
-
       setLoading(false);
     }
-
     loadAll();
   }, [idParam]);
 
+  // Sauvegarde les modifications
   async function handleSave() {
     if (!idParam) {
       alert("Identifiant manquant.");
@@ -119,20 +129,22 @@ export default function AssetPage() {
     setErrorMessage("");
 
     const body: any = {
-      id: Number(idParam), // <<< ajoute l'id ici
+      id: Number(idParam),
       computerName: computerName,
       assignedToId: assignedToId === "" ? null : assignedToId,
     };
 
+    console.log("Payload envoyé au PATCH /api/cmdb/update:", body);
+
     try {
       const res = await fetch("/api/cmdb/update", {
-        // <<< change l’URL
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(body),
       });
 
       const data = await res.json().catch(() => ({}));
+      console.log("Réponse API update:", data);
 
       if (!res.ok) {
         const msg = (data && data.error) || "Erreur lors de la mise à jour.";
@@ -142,6 +154,7 @@ export default function AssetPage() {
         router.push("/cmdb");
       }
     } catch (e) {
+      console.error("Erreur réseau (update):", e);
       setErrorMessage("Erreur réseau.");
       alert("Erreur réseau.");
     }
@@ -174,7 +187,10 @@ export default function AssetPage() {
                 label="Nom de l'ordinateur"
                 fullWidth
                 value={computerName}
-                onChange={(e) => setComputerName(e.target.value)}
+                onChange={(e) => {
+                  console.log("Nom ordinateur modifié:", e.target.value);
+                  setComputerName(e.target.value);
+                }}
                 margin="dense"
               />
 
@@ -193,6 +209,7 @@ export default function AssetPage() {
                 value={assignedToId}
                 onChange={(e) => {
                   const v = Number(e.target.value);
+                  console.log("Nouvelle sélection assignedToId:", v);
                   if (isNaN(v)) {
                     setAssignedToId("");
                   } else {

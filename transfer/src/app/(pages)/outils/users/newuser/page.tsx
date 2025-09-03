@@ -22,7 +22,7 @@ export default function Newuser() {
 
   const router = useRouter();
 
-  // Form fields
+  // Champs du formulaire
   const [firstName, setFirstName] = useState<string>("");
   const [lastName, setLastName] = useState<string>("");
   const [emailPrivate, setEmailPrivate] = useState<string>("");
@@ -31,16 +31,18 @@ export default function Newuser() {
   const [isAdmin, setIsAdmin] = useState<boolean>(false);
   const [mustChangePassword, setMustChangePassword] = useState<boolean>(false);
 
+  // Données liées
   const [locationId, setLocationId] = useState<number | null>(null);
   const [emailExists, setEmailExists] = useState<boolean>(false);
 
-  // Errors
+  // Messages d'erreur par champ
   const [firstNameError, setFirstNameError] = useState<string>("");
   const [lastNameError, setLastNameError] = useState<string>("");
   const [emailPrivateError, setEmailPrivateError] = useState<string>("");
   const [passwordError, setPasswordError] = useState<string>("");
   const [confirmPasswordError, setConfirmPasswordError] = useState<string>("");
 
+  // Récupère l'ID de la localisation
   useEffect(() => {
     async function fetchLocationId() {
       if (!locationName) {
@@ -48,7 +50,9 @@ export default function Newuser() {
         return;
       }
       try {
-        const res = await fetch(`/api/locations?location=${encodeURIComponent(locationName)}`);
+        const res = await fetch(
+          `/api/locations?location=${encodeURIComponent(locationName)}`
+        );
         const data = await res.json();
         if (data && typeof data.id === "number") {
           setLocationId(data.id);
@@ -62,13 +66,14 @@ export default function Newuser() {
     fetchLocationId();
   }, [locationName]);
 
+  // Génère l'email pro
   function generateProMail() {
     const f = firstName ? firstName.toLowerCase() : "";
     const l = lastName ? lastName.toLowerCase() : "";
     return f + "." + l + "@ticketease.be";
   }
 
-  // check if pro email exists
+  // Vérifie si l'email pro existe déjà
   useEffect(() => {
     const email = generateProMail();
     if (!email) {
@@ -79,7 +84,9 @@ export default function Newuser() {
     let timeoutId: any = null;
     async function checkEmail() {
       try {
-        const response = await fetch(`/api/users/check-email?email=${encodeURIComponent(email)}`);
+        const response = await fetch(
+          `/api/users/check-email?email=${encodeURIComponent(email)}`
+        );
         const data = await response.json();
         if (data && typeof data.exists === "boolean") {
           setEmailExists(data.exists);
@@ -100,13 +107,16 @@ export default function Newuser() {
   }, [firstName, lastName]);
 
   function validateNamesPattern(value: string) {
+    // Majuscule obligatoire + majuscule après un tiret, pas d'apostrophe
     const regex = /^[A-Z][a-z]*(-[A-Z][a-z]*)*$/;
     return regex.test(value);
   }
 
+  // Validation du formulaire
   function validateForm() {
     let ok = true;
 
+    // Prénom
     if (!firstName) {
       setFirstNameError("Le prénom est requis");
       ok = false;
@@ -121,6 +131,7 @@ export default function Newuser() {
       }
     }
 
+    // Nom
     if (!lastName) {
       setLastNameError("Le nom est requis");
       ok = false;
@@ -135,11 +146,11 @@ export default function Newuser() {
       }
     }
 
+    // Email privé
     if (!emailPrivate) {
       setEmailPrivateError("Email privé invalide");
       ok = false;
     } else {
-      //email check
       if (!emailPrivate.includes("@") || !emailPrivate.includes(".")) {
         setEmailPrivateError("Email privé invalide");
         ok = false;
@@ -148,6 +159,7 @@ export default function Newuser() {
       }
     }
 
+    // Mot de passe
     if (!password || password.length < 8) {
       setPasswordError("Le mot de passe doit contenir au moins 8 caractères");
       ok = false;
@@ -155,8 +167,11 @@ export default function Newuser() {
       setPasswordError("");
     }
 
+    // Confirmation mot de passe
     if (!confirmPassword || confirmPassword.length < 8) {
-      setConfirmPasswordError("Le mot de passe doit contenir au moins 8 caractères");
+      setConfirmPasswordError(
+        "Le mot de passe doit contenir au moins 8 caractères"
+      );
       ok = false;
     } else {
       if (confirmPassword !== password) {
@@ -167,11 +182,15 @@ export default function Newuser() {
       }
     }
 
+    // Vérif email pro existant
     if (emailExists) {
       ok = false;
-      alert("L'email professionnel existe déjà. Choisissez un autre prénom/nom.");
+      alert(
+        "L'email professionnel existe déjà. Choisissez un autre prénom/nom."
+      );
     }
 
+    // Localisation
     if (!locationId) {
       ok = false;
       alert("Localisation inconnue.");
@@ -180,6 +199,7 @@ export default function Newuser() {
     return ok;
   }
 
+  // Création
   async function handleCreate() {
     const ok = validateForm();
     if (!ok) {
@@ -208,7 +228,10 @@ export default function Newuser() {
       if (result && result.success) {
         router.push("/outils");
       } else {
-        const msg = result && result.message ? result.message : "Erreur lors de la création de l'utilisateur.";
+        const msg =
+          result && result.message
+            ? result.message
+            : "Erreur lors de la création de l'utilisateur.";
         alert("Erreur: " + msg);
       }
     } catch (e) {
@@ -280,7 +303,9 @@ export default function Newuser() {
                     variant="outlined"
                     disabled
                     value={generateProMail()}
-                    helperText={emailExists ? "Cet email professionnel existe déjà" : ""}
+                    helperText={
+                      emailExists ? "Cet email professionnel existe déjà" : ""
+                    }
                     error={emailExists}
                   />
                 </Grid>
@@ -322,7 +347,9 @@ export default function Newuser() {
                     control={
                       <Checkbox
                         checked={mustChangePassword}
-                        onChange={(e) => setMustChangePassword(e.target.checked)}
+                        onChange={(e) =>
+                          setMustChangePassword(e.target.checked)
+                        }
                       />
                     }
                     label="Doit changer au premier login"
@@ -331,7 +358,11 @@ export default function Newuser() {
               </Grid>
             </CardContent>
             <CardActions sx={{ justifyContent: "flex-end" }}>
-              <Button variant="contained" color="primary" onClick={handleCreate}>
+              <Button
+                variant="contained"
+                color="primary"
+                onClick={handleCreate}
+              >
                 Créer l'utilisateur
               </Button>
               <Button variant="outlined" onClick={handleCancel}>

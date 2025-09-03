@@ -29,22 +29,33 @@ import BallotIcon from "@mui/icons-material/Ballot";
 import DevicesIcon from "@mui/icons-material/Devices";
 import { useUserStore } from "@/app/store/userStore";
 import { authRedirect } from "@/app/components/authRedirect";
+import LogoutIcon from "@mui/icons-material/Logout";
 
 const drawerWidth = 240;
 
+/**
+ * Layout globale qui protège toutes les pages sous app/(pages)
+ * Vérifie l'authentification avec authRedirect
+ * Fournit un layout commun
+ * Injecte la page courante dans children
+ */
 export default function PagesLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
+  //Vérifie l'authentification
   const { loading, user } = authRedirect();
   const router = useRouter();
+  /**On cherche l'état de l'utilisateur dans le store et on applique clearUser ce qui le met à null
+   * Utilisé pour le logout
+   */
   const clearUser = useUserStore((state) => state.clearUser);
 
   const theme = useTheme();
   const isMdUp = useMediaQuery(theme.breakpoints.up("md"));
 
-  // mobile drawer open/close
+  // Drawer pour une version responsive
   const [mobileOpen, setMobileOpen] = React.useState(false);
   const handleDrawerToggle = () => setMobileOpen((prev) => !prev);
 
@@ -61,7 +72,7 @@ export default function PagesLayout({
 
   if (loading || !user) return null;
 
-  // shared drawer contents
+  // Contenu des drawers qui sont shared
   const drawerContent = (
     <Box
       sx={{
@@ -116,7 +127,7 @@ export default function PagesLayout({
             <AddCallIcon />
           </ListItemIcon>
           <ListItemText
-            primary="Incident"
+            primary="Incidents"
             slotProps={{ primary: { sx: { fontSize: 18 } } }}
           />
         </ListItemButton>
@@ -128,7 +139,7 @@ export default function PagesLayout({
             <AssignmentIcon />
           </ListItemIcon>
           <ListItemText
-            primary="Task"
+            primary="Tâches"
             slotProps={{ primary: { sx: { fontSize: 18 } } }}
           />
         </ListItemButton>
@@ -196,14 +207,12 @@ export default function PagesLayout({
   return (
     <Box sx={{ display: "flex" }}>
       <CssBaseline />
-
-      {/* Temporary drawer on xs/sm, permanent on md+ */}
       <Box
         component="nav"
         sx={{ width: { md: drawerWidth }, flexShrink: { md: 0 } }}
         aria-label="sidebar"
       >
-        {/* Mobile drawer */}
+        {/* Drawer responsive */}
         <Drawer
           variant="temporary"
           open={mobileOpen}
@@ -222,7 +231,7 @@ export default function PagesLayout({
           {drawerContent}
         </Drawer>
 
-        {/* Desktop drawer */}
+        {/* Drawer desktop */}
         <Drawer
           variant="permanent"
           open
@@ -254,7 +263,7 @@ export default function PagesLayout({
           }}
         >
           <Toolbar sx={{ minHeight: 64 }}>
-            {/* Menu button only on mobile */}
+            {/* Bouton seulement pour responsive */}
             <IconButton
               aria-label="open drawer"
               onClick={handleDrawerToggle}
@@ -274,11 +283,21 @@ export default function PagesLayout({
             >
               {user?.firstName} {user?.lastName}
             </Typography>
-            <Button onClick={handleLogout}>Déconnexion</Button>
+            <Button
+              onClick={handleLogout}
+              color="inherit"
+              startIcon={<LogoutIcon />}
+              sx={{
+                textTransform: "none",
+                fontWeight: 500,
+              }}
+            >
+              Déconnexion
+            </Button>
           </Toolbar>
         </AppBar>
 
-        {/* content */}
+        {/* contenu des pages */}
         <Box component="main" sx={{ mt: 8, p: { xs: 2, md: 3 } }}>
           {children}
         </Box>

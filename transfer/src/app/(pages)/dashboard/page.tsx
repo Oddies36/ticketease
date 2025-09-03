@@ -25,7 +25,7 @@ type TicketRow = {
 /**
  * Composant: Dashboard
  * Description:
- *   Affiche les compteurs suivants pour l’utilisateur connecté :
+ *   Affiche les compteurs suivants pour l'utilisateur connecté :
  *   - Incidents ouverts et incidents clôturés pour chaque localisation accessible par l'utilisateur
  *   - Tâches ouvertes et tâches clôturées pour chaque localisation accessible par l'utilisateur
  *   - Nombre de demandes à valider
@@ -43,7 +43,7 @@ export default function Dashboard() {
   // Indicateur de chargement
   const [loading, setLoading] = useState<boolean>(true);
 
-  // Compteurs d’incidents
+  // Compteurs d'incidents
   const [incidentOpenCount, setIncidentOpenCount] = useState<number>(0);
   const [incidentClosedCount, setIncidentClosedCount] = useState<number>(0);
 
@@ -107,7 +107,7 @@ export default function Dashboard() {
    * Paramètres:
    *   - prefix: string
    * Retourne:
-   *   - Promise<string[]> - liste des localisations, vide en cas d’erreur
+   *   - Promise<string[]> - liste des localisations, vide en cas d'erreur
    */
   async function getLocationsWithPrefix(prefix: string): Promise<string[]> {
     try {
@@ -253,8 +253,6 @@ export default function Dashboard() {
     }
     return { open, closed };
   }
-
-  /* ================================ RENDER ================================ */
 
   if (loading) {
     return (

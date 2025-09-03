@@ -17,9 +17,13 @@ import {
   ListItem,
 } from "@mui/material";
 
+// Statut d'incident
 type StatusItem = { id: number; label: string };
+
+// Utilisateur assignable
 type UserItem = { id: number; firstName: string; lastName: string };
 
+// Texte du temps restant ou de retard
 function remainingText(deadlineIso?: string | null): string {
   if (!deadlineIso) {
     return "-";
@@ -41,6 +45,7 @@ function remainingText(deadlineIso?: string | null): string {
   }
 }
 
+// Calcule une deadline depuis la création + minutes SLA
 function deadlineFromCreation(
   creationIso?: string,
   minutes?: number | null
@@ -56,6 +61,7 @@ function deadlineFromCreation(
   return out;
 }
 
+// Vérifie si un statut est "ouvert"
 function isOpenStatus(label?: string | null): boolean {
   if (!label) return false;
   const t = label.toLowerCase();
@@ -80,7 +86,7 @@ export default function TicketPage() {
   const [assignedToId, setAssignedToId] = useState<number | "">("");
   const [newComment, setNewComment] = useState<string>("");
 
-  // refresh remaining-time every minute
+  // Refresh du SLA chaque minute
   const [nowTick, setNowTick] = useState<number>(Date.now());
   useEffect(() => {
     const id = setInterval(() => {
@@ -89,12 +95,13 @@ export default function TicketPage() {
     return () => clearInterval(id);
   }, []);
 
+  // Charge ticket + statuts
   useEffect(() => {
     async function loadAll() {
       setLoading(true);
       setErrorMessage("");
 
-      // ticket details
+      // Les tickets
       try {
         const res = await fetch(
           "/api/incidents/get-ticket?id=" + encodeURIComponent(ticketIdParam)
@@ -124,7 +131,7 @@ export default function TicketPage() {
         setTicket(null);
       }
 
-      // statuses
+      // Les statuts
       try {
         const res = await fetch("/api/incidents/statuses");
         const data = await res.json();
@@ -147,7 +154,7 @@ export default function TicketPage() {
     loadAll();
   }, [ticketIdParam]);
 
-  // load group members (only from assignmentGroup)
+  // Charge les utilisateurs du groupe d'assignation
   useEffect(() => {
     async function loadUsers() {
       if (!ticket || typeof ticket.assignmentGroupId !== "number") {
@@ -178,26 +185,22 @@ export default function TicketPage() {
     loadUsers();
   }, [ticket]);
 
+  // Cherche l'ID du statut "clos/fermé"
   function getClosedStatusId(): number | null {
-    let closedId: number | null = null;
-    for (let i = 0; i < statuses.length; i++) {
-      const text = (statuses[i].label || "").toLowerCase();
-      // cover common labels you might use
+    for (const s of statuses) {
+      const text = (s.label || "").toLowerCase();
       if (
-        text === "clôturé" ||
-        text === "cloturé" || // just in case accents differ
-        text === "fermé" ||
-        text === "ferme" ||
-        text === "clos" ||
-        text === "closed"
+        ["clôturé", "cloturé", "fermé", "ferme", "clos", "closed"].includes(
+          text
+        )
       ) {
-        closedId = statuses[i].id;
-        break;
+        return s.id;
       }
     }
-    return closedId;
+    return null;
   }
 
+  // Sauvegarde statut/assignation
   async function saveTicket() {
     if (!ticket) {
       return;
@@ -209,8 +212,6 @@ export default function TicketPage() {
       closedId !== null &&
       statusId === closedId
     ) {
-      // If user selected the closed status in the dropdown,
-      // just run the close flow and exit.
       await closeTicket();
       return;
     }
@@ -240,6 +241,8 @@ export default function TicketPage() {
         const reload = await fetch(
           "/api/incidents/get-ticket?id=" + String(ticket.id)
         );
+
+        // Recharge
         const fresh = await reload.json();
         setTicket(fresh.ticket);
         if (typeof fresh.ticket.statusId === "number") {
@@ -257,6 +260,7 @@ export default function TicketPage() {
     setSaving(false);
   }
 
+  // Clôture le ticket
   async function closeTicket() {
     if (!ticket) {
       return;
@@ -268,7 +272,6 @@ export default function TicketPage() {
     try {
       let closedStatusId: number | null = null;
       for (let i = 0; i < statuses.length; i++) {
-        console.log(statuses[i]);
         const text = (statuses[i].label || "").toLowerCase();
         if (text === "clôturé") {
           closedStatusId = statuses[i].id;
@@ -314,6 +317,7 @@ export default function TicketPage() {
     setSaving(false);
   }
 
+  // Ajoute un commentaire
   async function addComment() {
     if (!ticket) {
       return;
@@ -411,9 +415,13 @@ export default function TicketPage() {
               />
               <TextField
                 fullWidth
-                label="crée par"
+                label="Créé par"
                 value={
-                  ticket.createdBy.firstName + " " + ticket.createdBy.lastName
+                  ticket.createdBy
+                    ? ticket.createdBy.firstName +
+                      " " +
+                      ticket.createdBy.lastName
+                    : "Utilisateur supprimé"
                 }
                 margin="dense"
                 disabled
@@ -447,7 +455,7 @@ export default function TicketPage() {
                 value={
                   ticket.responseDate
                     ? new Date(ticket.responseDate).toLocaleString()
-                    : "Répondu"
+                    : "Pas répondu"
                 }
                 margin="dense"
                 disabled
@@ -456,7 +464,7 @@ export default function TicketPage() {
                 {ticket.responseDate && isOpenStatus(ticket.status?.label)
                   ? "Temps restant (réponse): " +
                     remainingText(ticket.responseDate)
-                  : "Temps restant (réponse): —"}
+                  : "Temps restant (réponse): -"}
               </Typography>
 
               {/* SLA résolution */}
@@ -475,11 +483,11 @@ export default function TicketPage() {
               />
               <Typography sx={{ mb: 2 }}>
                 {ticket.closedDate
-                  ? "Temps restant (résolution): —"
+                  ? "Temps restant (résolution): -"
                   : resolutionDeadlineIso
                     ? "Temps restant (résolution): " +
                       remainingText(resolutionDeadlineIso)
-                    : "Temps restant (résolution): —"}
+                    : "Temps restant (résolution): -"}
               </Typography>
 
               <Typography sx={{ mt: 2, mb: 0.5 }}>Statut</Typography>
@@ -522,7 +530,9 @@ export default function TicketPage() {
                 }}
                 displayEmpty
               >
-                <MenuItem value="">Non assigné</MenuItem>
+                <MenuItem value="" disabled>
+                  <em>Sélectionner</em>
+                </MenuItem>
                 {users.map((u) => (
                   <MenuItem key={u.id} value={u.id}>
                     {u.firstName} {u.lastName}

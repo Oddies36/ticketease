@@ -17,7 +17,7 @@ import {
 } from "@mui/material";
 
 /**
- * Structure minimale d’un ticket (incident ou tâche) renvoyé par les endpoints "mes tickets".
+ * Structure minimale d'un ticket (incident ou tâche) renvoyé par les endpoints "mes tickets".
  */
 type TicketRow = {
   id: number;
@@ -32,6 +32,7 @@ type TicketRow = {
   sla?: { responseTime: number; resolutionTime: number } | null;
 };
 
+// Type columnkey
 type ColumnKey =
   | "number"
   | "title"
@@ -54,7 +55,7 @@ type Order = "asc" | "desc";
  *   - GET /api/tasks/mytask     -> { tasks: TicketRow[] } ou { tickets: TicketRow[] }
  */
 export default function MyTicketsPage() {
-  /* ============================== ÉTATS ============================== */
+  /* ============================== ETATS ============================== */
   const router = useRouter();
 
   const [loading, setLoading] = useState<boolean>(true);
@@ -71,14 +72,14 @@ export default function MyTicketsPage() {
   const [taskSortBy, setTaskSortBy] = useState<ColumnKey>("creationDate");
   const [taskOrder, setTaskOrder] = useState<Order>("desc");
 
-  // Tick toutes les 60s pour recalcul SLA à l’affichage (impacte tri SLA aussi)
+  // Tick toutes les 60s pour recalcul SLA à l'affichage (impacte tri SLA aussi)
   const [now, setNow] = useState<number>(Date.now());
   useEffect(() => {
     const id = window.setInterval(() => setNow(Date.now()), 60000);
     return () => window.clearInterval(id);
   }, []);
 
-  /* ============================ DATA FETCH =========================== */
+  // Récupère les incidents et tâches
   useEffect(() => {
     async function loadMyTickets() {
       setLoading(true);
@@ -120,27 +121,29 @@ export default function MyTicketsPage() {
     loadMyTickets();
   }, []);
 
-  /* ======================== HELPERS & TRI ======================== */
-
+  // Ouverture d'un incident
   function openIncident(id: number) {
     router.push("/incidents/ticket?id=" + String(id));
   }
+
+  // Ouverture d'une tâche
   function openTask(id: number) {
-    // Adapte le chemin si différent dans ton app
     router.push("/tasks/task?id=" + String(id));
   }
 
+  // Vérifie si le statut est ouvert
   function isOpenStatus(label?: string | null): boolean {
     if (!label) return false;
     return label.toLowerCase() === "ouvert";
   }
 
+  // Ajoute des minutes a un temps
   function addMinutes(iso: string, minutes: number): number {
-    const t = new Date(iso).getTime();
-    return t + minutes * 60000;
+    const time = new Date(iso).getTime();
+    return time + minutes * 60000;
   }
 
-  // Valeur d’affichage SLA réponse
+  // Valeur d'affichage SLA réponse
   function displaySlaResponse(t: TicketRow): string {
     if (t.responseDate && isOpenStatus(t.status?.label)) {
       const end = new Date(t.responseDate).getTime();
@@ -155,7 +158,7 @@ export default function MyTicketsPage() {
     return "Répondu";
   }
 
-  // Valeur d’affichage SLA résolution
+  // Valeur d'affichage SLA résolution
   function displaySlaResolution(t: TicketRow): string {
     if (t.closedDate) return "Clos";
     if (t.sla?.resolutionTime != null) {
@@ -171,7 +174,7 @@ export default function MyTicketsPage() {
     return "-";
   }
 
-  // Clés de tri calculables (numériques pour SLA et dates; texte pour le reste)
+  // Clés de tri calculables
   function sortValue(t: TicketRow, key: ColumnKey): number | string {
     switch (key) {
       case "number":
@@ -185,7 +188,7 @@ export default function MyTicketsPage() {
       case "assignedTo":
         return t.assignedTo
           ? `${t.assignedTo.firstName} ${t.assignedTo.lastName}`.toLowerCase()
-          : ""; // les non assignés en haut en tri asc
+          : "";
       case "creationDate":
         return new Date(t.creationDate).getTime();
       case "slaResponse": {
@@ -216,42 +219,43 @@ export default function MyTicketsPage() {
     key: ColumnKey,
     order: Order
   ): number {
+    // Récupère la valeur triable pour chaque ticket (numérique ou texte)
     const av = sortValue(a, key);
     const bv = sortValue(b, key);
-    let res: number;
-    if (typeof av === "number" && typeof bv === "number") {
-      res = av - bv;
-    } else {
-      res = String(av).localeCompare(String(bv), "fr", {
-        numeric: true,
-        sensitivity: "base",
-      });
-    }
+
+    // Si les deux valeurs sont numériques → soustraction
+    // Sinon → comparaison texte avec localeCompare (ordre alphabétique FR)
+    const res =
+      typeof av === "number" && typeof bv === "number"
+        ? av - bv
+        : String(av).localeCompare(String(bv), "fr", {
+            numeric: true, // compare "2" < "10" correctement
+            sensitivity: "base", // ignore majuscules/accents
+          });
+
+    // Retourne le résultat selon l'ordre demandé (ascendant/descendant)
     return order === "asc" ? res : -res;
   }
 
-  function sortTickets(rows: TicketRow[], key: ColumnKey, order: Order) {
-    return [...rows].sort((a, b) => compare(a, b, key, order));
-  }
+  // Trie un tableau de tickets selon la colonne et l'ordre choisis
+  const sortTickets = (rows: TicketRow[], key: ColumnKey, order: Order) =>
+    [...rows].sort((a, b) => compare(a, b, key, order));
 
-  function toggleIncSort(key: ColumnKey) {
-    if (incSortBy === key) {
-      setIncOrder((o) => (o === "asc" ? "desc" : "asc"));
-    } else {
-      setIncSortBy(key);
-      setIncOrder("asc");
-    }
-  }
+  // Bascule du tri pour les incidents :
+  // si on reclique sur la même colonne → inverse asc/desc
+  // sinon → nouvelle colonne triée en asc
+  const toggleIncSort = (key: ColumnKey) =>
+    incSortBy === key
+      ? setIncOrder((o) => (o === "asc" ? "desc" : "asc"))
+      : (setIncSortBy(key), setIncOrder("asc"));
 
-  function toggleTaskSort(key: ColumnKey) {
-    if (taskSortBy === key) {
-      setTaskOrder((o) => (o === "asc" ? "desc" : "asc"));
-    } else {
-      setTaskSortBy(key);
-      setTaskOrder("asc");
-    }
-  }
+  // Même logique pour les tâches
+  const toggleTaskSort = (key: ColumnKey) =>
+    taskSortBy === key
+      ? setTaskOrder((o) => (o === "asc" ? "desc" : "asc"))
+      : (setTaskSortBy(key), setTaskOrder("asc"));
 
+  // Tickets incidents et tâches triés selon les paramètres actuels
   const incRows = sortTickets(incidentTickets, incSortBy, incOrder);
   const taskRows = sortTickets(taskTickets, taskSortBy, taskOrder);
 
