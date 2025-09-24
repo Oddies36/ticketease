@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
+import { SelectChangeEvent } from "@mui/material/Select";
 import { useRouter } from "next/navigation";
 import {
   Box,
@@ -17,6 +18,12 @@ import {
 
 // Utilisateur renvoyé par l'api
 type UserItem = { id: number; firstName: string; lastName: string };
+
+type CreateComputerPayload = {
+  computerName: string;
+  serialNumber: string;
+  assignedToId: number | null;
+};
 
 export default function NewAssetPage() {
   const router = useRouter();
@@ -66,7 +73,7 @@ export default function NewAssetPage() {
           }
           setUsers(list);
         }
-      } catch (e) {
+      } catch {
         setUsers([]);
       }
       setLoadingUsers(false);
@@ -88,9 +95,9 @@ export default function NewAssetPage() {
     setSaving(true);
     setErrorMessage("");
 
-    const body: any = {
-      computerName: computerName,
-      serialNumber: serialNumber,
+    const body: CreateComputerPayload = {
+      computerName,
+      serialNumber,
       assignedToId: assignedToId === "" ? null : assignedToId,
     };
 
@@ -111,7 +118,7 @@ export default function NewAssetPage() {
       } else {
         router.push("/cmdb");
       }
-    } catch (e) {
+    } catch {
       setErrorMessage("Erreur réseau lors de la création.");
       alert("Erreur réseau lors de la création.");
     }
@@ -133,7 +140,9 @@ export default function NewAssetPage() {
                 label="Nom de l'ordinateur"
                 fullWidth
                 value={computerName}
-                onChange={(e) => setComputerName(e.target.value)}
+                onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+                  setComputerName(e.target.value)
+                }
                 margin="dense"
               />
 
@@ -141,7 +150,9 @@ export default function NewAssetPage() {
                 label="Numéro de série"
                 fullWidth
                 value={serialNumber}
-                onChange={(e) => setSerialNumber(e.target.value)}
+                onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+                  setSerialNumber(e.target.value)
+                }
                 margin="dense"
               />
 
@@ -153,7 +164,7 @@ export default function NewAssetPage() {
                   fullWidth
                   size="small"
                   value={assignedToId}
-                  onChange={(e) => {
+                  onChange={(e: SelectChangeEvent<string | number>) => {
                     const v = Number(e.target.value);
                     if (isNaN(v)) {
                       setAssignedToId("");

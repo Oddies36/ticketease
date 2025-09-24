@@ -18,6 +18,13 @@ import {
 // Utilisateur renvoyé par l'API
 type UserItem = { id: number; firstName: string; lastName: string };
 
+// Payload pour la mise à jour d'un ordinateur
+type UpdateComputerPayload = {
+  id: number;
+  computerName: string;
+  assignedToId: number | null;
+};
+
 export default function AssetPage() {
   const router = useRouter();
   const search = useSearchParams();
@@ -87,7 +94,7 @@ export default function AssetPage() {
           const list: UserItem[] = [];
 
           if (Array.isArray(data)) {
-            data.forEach((u: any) => {
+            data.forEach((u: UserItem) => {
               list.push({
                 id: u.id,
                 firstName: u.firstName,
@@ -95,7 +102,7 @@ export default function AssetPage() {
               });
             });
           } else if (Array.isArray(data.users)) {
-            data.users.forEach((u: any) => {
+            data.users.forEach((u: UserItem) => {
               list.push({
                 id: u.id,
                 firstName: u.firstName,
@@ -128,7 +135,7 @@ export default function AssetPage() {
     setSaving(true);
     setErrorMessage("");
 
-    const body: any = {
+    const body: UpdateComputerPayload = {
       id: Number(idParam),
       computerName: computerName,
       assignedToId: assignedToId === "" ? null : assignedToId,
@@ -187,7 +194,7 @@ export default function AssetPage() {
                 label="Nom de l'ordinateur"
                 fullWidth
                 value={computerName}
-                onChange={(e) => {
+                onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
                   console.log("Nom ordinateur modifié:", e.target.value);
                   setComputerName(e.target.value);
                 }}

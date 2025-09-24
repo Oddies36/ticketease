@@ -74,7 +74,7 @@ export default function CmdbPage() {
 
         const data = await res.json();
         if (data && Array.isArray(data.items)) {
-          setItems(data.items);
+          setItems(data.items as ComputerRow[]);
         } else {
           setItems([]);
         }
@@ -96,23 +96,27 @@ export default function CmdbPage() {
 
   // Applique le tri corrigé
   const sortedItems = [...items].sort((a, b) => {
-    let aValue: any = a[orderBy];
-    let bValue: any = b[orderBy];
+    let aValue: string | number | ComputerRow["assignedTo"] | null | undefined =
+      a[orderBy] as string | number | ComputerRow["assignedTo"] | null | undefined;
+    let bValue: string | number | ComputerRow["assignedTo"] | null | undefined =
+      b[orderBy] as string | number | ComputerRow["assignedTo"] | null | undefined;
 
     // Si tri sur les dates
     if (orderBy === "createdAt" || orderBy === "assignedAt") {
-      const aTime = aValue ? new Date(aValue).getTime() : 0;
-      const bTime = bValue ? new Date(bValue).getTime() : 0;
+      const aTime = aValue ? new Date(aValue as string).getTime() : 0;
+      const bTime = bValue ? new Date(bValue as string).getTime() : 0;
       return order === "asc" ? aTime - bTime : bTime - aTime;
     }
 
     // Si tri sur assignedTo (objet)
     if (orderBy === "assignedTo") {
-      aValue = aValue ? `${aValue.firstName} ${aValue.lastName}` : "";
-      bValue = bValue ? `${bValue.firstName} ${bValue.lastName}` : "";
+      const aUser = aValue as ComputerRow["assignedTo"];
+      const bUser = bValue as ComputerRow["assignedTo"];
+      aValue = aUser ? `${aUser.firstName} ${aUser.lastName}` : "";
+      bValue = bUser ? `${bUser.firstName} ${bUser.lastName}` : "";
     }
 
-    // Comparaison naturelle pour strings
+    // Comparaison naturelle pour strings/nombres
     return order === "asc"
       ? String(aValue).localeCompare(String(bValue), undefined, {
           numeric: true,
@@ -160,7 +164,9 @@ export default function CmdbPage() {
               variant="outlined"
               placeholder="Rechercher..."
               value={searchText}
-              onChange={(e) => setSearchText(e.target.value)}
+              onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+                setSearchText(e.target.value)
+              }
               InputProps={{
                 startAdornment: (
                   <InputAdornment position="start">
@@ -190,7 +196,7 @@ export default function CmdbPage() {
                   { id: "assignedAt", label: "Attribué le" },
                   { id: "createdAt", label: "Créé le" },
                 ].map((col) => (
-                  <TableCell key={col.id}>
+                  <TableCell {...({ key: col.id } as any)}>
                     <TableSortLabel
                       active={orderBy === col.id}
                       direction={orderBy === col.id ? order : "asc"}
@@ -205,7 +211,7 @@ export default function CmdbPage() {
             <TableBody>
               {sortedItems.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={5}>Aucun ordinateur.</TableCell>
+                  <TableCell {...({ colSpan: 5 } as any)}>Aucun ordinateur.</TableCell>
                 </TableRow>
               ) : (
                 sortedItems.map((c) => {
